@@ -8,6 +8,7 @@ https://medium.com/@aallan/getting-started-with-the-esp8266-270e30feb4d1
 
 https://sub.nanona.fi/esp8266/index.html
 
+https://github.com/espressif/ESP8266_NONOS_SDK
 
 
 RST -> Vcc
@@ -224,6 +225,14 @@ Instalar platform IO. Extensión de vscode.
 
 Dos SDK, una con RTOS y otra sin él (nonos). Con ESP32 sólo está la RTOS. La nonos podría quedar sin soporte.
 https://github.com/espressif/ESP8266_NONOS_SDK/issues/229
+
+    Support Policy for ESP8266 NonOS (Starting from December 2019)
+    
+    - We will not add any new features to the ESP8266 NonOS SDK.
+    - We will only fix critical bugs in the ESP8266 NonOS SDK.
+	...
+    - It is suggested that the ESP8266_RTOS_SDK, instead of ESP8266 NonOS SDK, be used for your projects.
+
 
 
 Ir a import example proyect.
