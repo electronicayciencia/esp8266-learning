@@ -251,3 +251,95 @@ La SDK necesita fichero user_config.h
 El linker necesita dos funciones más:
 (.irom0.text+0x748): undefined reference to `user_init'
 (.irom0.text+0x8e7): undefined reference to `user_rf_cal_sector_set'
+
+
+
+La versión de la SDK para ESP8266 que viene con PlatformIO parece ser muy antigua.
+
+
+----------------------------
+android-a2bdf5:/cygdrive/d/tmp/esp$ 
+git clone --recursive https://github.com/espressif/ESP8266_RTOS_SDK.git
+
+IDF_PATH=/cygdrive/d/tmp/esp/ESP8266_RTOS_SDK
+
+----------------------
+
+Seguir estas instrucciones:
+
+https://docs.espressif.com/projects/esp8266-rtos-sdk/en/latest/get-started/windows-setup.html
+
+En cygwin:
+
+export IDF_PATH=/home/Reinoso/esp/ESP8266_RTOS_SDK
+. ${IDF_PATH}/add_path.sh
+
+
+Copiar la toolchain xtensa-lx106-elf a /opt y añadir su ruta en el $PATH
+
+Falla el linker:
+
+LD build/hello-world.elf
+d:/tmp/esp/msys32/opt/xtensa-lx106-elf/bin/../lib/gcc/xtensa-lx106-elf/5.2.0/../../../../xtensa-lx106-elf/bin/ld.exe: cannot find -lc_nano
+collect2.exe: error: ld returned 1 exit status
+make: *** [/home/Reinoso/esp/ESP8266_RTOS_SDK/make/project.mk:510: /home/Reinoso/esp/hello_world/build/hello-world.elf] Error 1
+
+cambio en sdkconfig:
+CONFIG_NEWLIB_NANO_FORMAT=y
+por
+CONFIG_NEWLIB_NANO_FORMAT=n
+
+make // Compila
+make flash // Flashea bien
+make monitor // leer del puerto serie
+
+
+Para VSC:
+
+Ajusto los includes:
+
+    ${default}
+    ${workspaceFolder}\build\include
+    D:\tmp\esp\msys32\**
+    D:\tmp\esp\msys32\home\Reinoso\esp\ESP8266_RTOS_SDK\components\freertos\**
+
+ssh-keygen // crear clave para git
+
+
+vscode reconoce las rutas con / además de con \
+
+
+
+
+-------------
+
+Otra prueba:
+
+https://docs.espressif.com/projects/esp8266-rtos-sdk/en/latest/
+
+Funciona con Eclipse
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
