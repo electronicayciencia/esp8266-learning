@@ -308,20 +308,25 @@ ssh-keygen // crear clave para git
 
 vscode reconoce las rutas con / además de con \
 
+Ruta del repo github:
 
+    D:\tmp\esp\msys32\home\Reinoso\esp\esp8266-learning
 
+Crear directorio led_on_of-espidf
+Copiar ejemplo de examples/get-started/hello_world
+Iniciar el bash de sys32: /usr/bin/bash -l
+Make menuconfig:
+- cambiar puerto serie a COM3.
+- bootloader log level a debug
+- Enable FreeRTOS trace facility: marcar
+- Enable 'nano' formatting options for printf/scanf family: desmarcar
+Se crea el directorio build y el fichero sdkconfig.
 
--------------
+Falla por la libc_nano.
 
-Otra prueba:
+Añadir CONFIG_NEWLIB_NANO_FORMAT=n a sdkconfig.
 
-https://docs.espressif.com/projects/esp8266-rtos-sdk/en/latest/
-
-Funciona con Eclipse
-
-
-
-
+------------
 
 
 
