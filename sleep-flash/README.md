@@ -25,3 +25,5 @@ RTOS tasks must **infinite loop or terminate**. Otherwise...
 
 
 Calls to ESP_LOGI do not need CRLF.
+
+Current is 13mA.
