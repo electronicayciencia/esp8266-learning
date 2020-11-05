@@ -5,7 +5,7 @@
             "includePath": [
                 "${default}",
                 "${workspaceFolder}/build/include",
-                "D:/tmp/esp/msys32/opt/xtensa-lx106-elf/**",
+                "${workspaceFolder}/../../xtensa-lx106-elf/**",
                 "${workspaceFolder}/../../ESP8266_RTOS_SDK/components/**",
                 "${workspaceFolder}/../../ESP8266_RTOS_SDK/components/freertos/port/esp8266/include"
             ],

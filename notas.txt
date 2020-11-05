@@ -10,6 +10,10 @@ https://sub.nanona.fi/esp8266/index.html
 
 https://github.com/espressif/ESP8266_NONOS_SDK
 
+Esp-idf is the sdk
+Msys2 is the environment
+Xtensa-esp32-elf is the toolchain
+
 
 RST -> Vcc
 CHPD -> Vcc
@@ -296,12 +300,31 @@ make monitor // leer del puerto serie
 
 Para VSC:
 
-Ajusto los includes:
+Ajusto los includes, crear configuración en .vscode\c_cpp_properties.json
 
-    ${default}
-    ${workspaceFolder}\build\include
-    D:\tmp\esp\msys32\**
-    D:\tmp\esp\msys32\home\Reinoso\esp\ESP8266_RTOS_SDK\components\freertos\**
+
+    {
+        "configurations": [
+            {
+                "name": "esp",
+                "includePath": [
+                    "${default}",
+                    "${workspaceFolder}/build/include",
+                    "D:/tmp/esp/msys32/opt/xtensa-lx106-elf/**",
+                    "${workspaceFolder}/../../ESP8266_RTOS_SDK/components/**",
+                    "${workspaceFolder}/../../ESP8266_RTOS_SDK/components/freertos/port/esp8266/include"
+                ],
+                "defines": [
+                    "_DEBUG",
+                    "UNICODE",
+                    "_UNICODE"
+                ],
+                "intelliSenseMode": "gcc-x64"
+            }
+        ],
+        "version": 4
+    }
+
 
 ssh-keygen // crear clave para git
 
@@ -328,17 +351,74 @@ Añadir CONFIG_NEWLIB_NANO_FORMAT=n a sdkconfig.
 
 ------------
 
+Intento compilar blinking, da error:
 
 
+.flash.rodata len 0x03f38 load 0x4021cb88
+
+A fatal error occurred: Segment loaded at 0x4021cb88 lands in same 64KB flash mapping as segment loaded at 0x40210010. Can't generate binary. Suggest changing linker script or ELF to merge sections.
+make: *** [/home/Reinoso/esp/ESP8266_RTOS_SDK/components/esptool_py/Makefile.projbuild:72: /home/Reinoso/esp/esp8266-learning/led_on_off-espidf/build/led_on_off.bin] Error 2
 
 
+Clean: no funciona,
+Borrar build: no funciona
+Vuelvo a copiar el hello_world. Compila bien. Borro línea por línea. Descubro que salta cuando comento la linea esp_restart() al final de la función.
+
+Ya compila
+-------------
+
+Intento flashear, da error:
+
+File  md5: ec1233aaaac6b417c667f1a553d17075
+Flash md5: a2ffd22a178c52fc698c870a7d5e84ce
+MD5 of 0xFF is 5c39cf28d16ad4781c8dc169e42de7c0
+
+A fatal error occurred: MD5 of file does not match data in flash!
 
 
+Intento corregirlo: Vuelve a salir el error de "Can't generate binary.".
+
+-------------
+
+Este bucle, con el while no compila, pero con el for sí.
+
+    for (int i = 10; i >= 0; i--) {
+    //while(true) {
+        printf("Restarting in gfrss seconds...\n");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 
 
+------------
+
+Instalo entorno de cero.
+
+Compilo. Da el mismo error por la libnano.
+
+------------
+
+Me bajo versión estable, release de:
+    https://github.com/espressif/ESP8266_RTOS_SDK/releases/tag/v3.3
 
 
+La copio en lugar de la bajada de github.
+Borro el directorio hello world. Copio el ejemplo.
+En el makeconfig cambio el puerto serie y el tamaño de la flash a 1Mb.
 
+Hello world compila sin errores.
+
+Flash y monitor funcionan.
+
+Hago el cambio de for por el while: compila sin problemas.
+
+Corregir rutas en .bashrc para poder compilar desde terminal:
+    export PATH="/mingw32/bin:/usr/local/bin:/usr/bin:/bin:/opt/bin:/c/Windows/System32:/c/Windows:/c/Windows/System32/Wbem:/c/Windows/System32/WindowsPowerShell/v1.0/:/opt/xtensa-esp32-elf/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl"
+    export PATH="$PATH:$HOME/esp/xtensa-lx106-elf/bin"
+    export IDF_PATH="$HOME/esp/ESP8266_RTOS_SDK"
+
+Ya compila. El delay lo hace bien. Lo veo por el puerto serie. Pero el led no se enciende.
+
+Veo ejemplo: https://github.com/espressif/ESP8266_RTOS_SDK/blob/master/examples/peripherals/spi_oled/main/spi_oled_example_main.c
 
 
 
