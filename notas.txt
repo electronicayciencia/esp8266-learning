@@ -393,6 +393,8 @@ Este bucle, con el while no compila, pero con el for sí.
 
 Instalo entorno de cero.
 
+Instrucciones de: https://docs.espressif.com/projects/esp8266-rtos-sdk/en/latest/
+
 Compilo. Da el mismo error por la libnano.
 
 ------------
@@ -419,6 +421,37 @@ Corregir rutas en .bashrc para poder compilar desde terminal:
 Ya compila. El delay lo hace bien. Lo veo por el puerto serie. Pero el led no se enciende.
 
 Veo ejemplo: https://github.com/espressif/ESP8266_RTOS_SDK/blob/master/examples/peripherals/spi_oled/main/spi_oled_example_main.c
+
+
+------
+
+Consume 17ma, tanto con el led encendido, como apagado, como en bootloader.
+
+¿Qué pasa cuando se acaba la rutina app_main? ¿se resetea o entra en sleep?
+
+------
+
+Al activar power management, y desactivar bootloader initi spi, ha dejado de responder el bootloader.
+
+Ha vuelto al responder tras tenerlo un tiempo desconectado y borrar la flash usando esptool
+
+---------
+
+Describe el protocolo que usa esptool para hablar con el chip.
+
+https://github.com/espressif/esptool/wiki/Serial-Protocol
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
