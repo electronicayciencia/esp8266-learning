@@ -10,6 +10,8 @@ https://sub.nanona.fi/esp8266/index.html
 
 https://github.com/espressif/ESP8266_NONOS_SDK
 
+https://hackaday.com/2015/03/18/how-to-directly-program-an-inexpensive-esp8266-wifi-module/
+
 Esp-idf is the sdk
 Msys2 is the environment
 Xtensa-esp32-elf is the toolchain
@@ -18,6 +20,8 @@ ESP01 -> FCC compliant module
 
 RST -> Vcc
 CHPD -> Vcc
+
+CH340 vs CP2102
 
 Putty: 115200
 

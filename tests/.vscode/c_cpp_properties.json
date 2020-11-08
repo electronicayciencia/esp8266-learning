@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "esp",
+            "includePath": [
+                "${default}",
+                "${workspaceFolder}/build/include",
+                "${workspaceFolder}/../../xtensa-lx106-elf/**",
+                "${workspaceFolder}/../../ESP8266_RTOS_SDK/components/**",
+                "${workspaceFolder}/../../ESP8266_RTOS_SDK/components/freertos/port/esp8266/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}
