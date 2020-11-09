@@ -1,44 +1,65 @@
-#include "sdkconfig.h"
 #include <stdio.h> // printf
 #include "freertos/FreeRTOS.h" // portTICK_PERIOD_MS
 #include "freertos/task.h" // vTaskDelay
-#include "driver/gpio.h" // gpio_set_level & others
 #include "esp_log.h" // ESP_LOGI
-#include "esp_sleep.h"
 
-// LED is connected to Vcc.
-#define LED_ON   0
-#define LED_OFF  1
+#include "driver/i2c.h"
 
-#define PIN_LED GPIO_NUM_2
+#define LOG_TAG "i2c"
+#define I2C_SCL_IO 0        
+#define I2C_SDA_IO 2       
+#define I2C_NUM    0
 
-#define PERIOD_MS 1000
-#define ON_MS 50
-
-
-
-void task_flash_led() {
-	while(true) {
-		gpio_set_level(PIN_LED, LED_ON);
-		vTaskDelay(ON_MS/portTICK_PERIOD_MS);
-		gpio_set_level(PIN_LED, LED_OFF);
-
-		vTaskDelay(PERIOD_MS/portTICK_PERIOD_MS);
-	}
+static esp_err_t i2c_init() {
+    i2c_config_t conf;
+    conf.mode = I2C_MODE_MASTER;
+    conf.sda_io_num = I2C_SDA_IO;
+    conf.sda_pullup_en = 1;
+    conf.scl_io_num = I2C_SCL_IO;
+    conf.scl_pullup_en = 1;
+    conf.clk_stretch_tick = 100; // what is this for?
+    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode));
+    ESP_ERROR_CHECK(i2c_param_config(I2C_NUM, &conf));
+    return ESP_OK;
 }
 
+/* Performs an I2C scan.
+   You need to call STOP command because i2c_master_cmd_begin won't process
+   stop command for empty addresses because it does not receive the ACK. */
+static esp_err_t i2c_scan() {
+	uint8_t addr;
+	esp_err_t ret;
+
+	// prepare stand-alone stop command
+	i2c_cmd_handle_t stop = i2c_cmd_link_create();
+	i2c_master_stop(stop);
+
+	for (addr = 0; addr < 127; addr++) {
+    	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    	i2c_master_start(cmd);
+   		i2c_master_write_byte(cmd, addr << 1 | I2C_MASTER_READ, 1);
+    	ret = i2c_master_cmd_begin(I2C_NUM, cmd, 2 / portTICK_RATE_MS);
+    	i2c_cmd_link_delete(cmd);
+
+    	i2c_master_cmd_begin(I2C_NUM, stop, 0);
+
+		if (ret == ESP_OK) {
+			ESP_LOGI(LOG_TAG, "Device found at 0x%02x.", addr);
+		}
+		//vTaskDelay(10 / portTICK_RATE_MS);
+	}
+
+	i2c_cmd_link_delete(stop);
+    return ESP_OK;
+}
 
 
 void app_main()
 {
-	gpio_config_t io_conf;
-	io_conf.pin_bit_mask = (1 << PIN_LED);
-	io_conf.mode = GPIO_MODE_OUTPUT;
-	io_conf.intr_type = GPIO_INTR_DISABLE;
-	gpio_config(&io_conf);
-
-	gpio_set_level(PIN_LED, LED_OFF);
-
-	xTaskCreate(task_flash_led, "flash_led", configMINIMAL_STACK_SIZE, NULL, 5, NULL);
-	ESP_LOGI("main","End. Go to bed.");
+	i2c_init();
+	ESP_LOGI(LOG_TAG, "Init done");
+	i2c_scan();
+	ESP_LOGI(LOG_TAG, "Scan done");
+	//xTaskCreate(task_flash_led, "flash_led", configMINIMAL_STACK_SIZE, NULL, 5, NULL);
+//	ESP_LOGI("main","End. Go to bed.");
 }

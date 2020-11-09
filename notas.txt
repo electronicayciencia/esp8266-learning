@@ -446,6 +446,102 @@ Describe el protocolo que usa esptool para hablar con el chip.
 
 https://github.com/espressif/esptool/wiki/Serial-Protocol
 
+--------------
+Dice el datasheet (technical reference):
+
+The baud rate of the printed information is relevant to the frequency of the external crystal oscillator. If the
+frequency of the crystal oscillator is 40 MHz, then the baud rate for printing is 115200; if the frequency of the
+crystal oscillator is 26 MHz, then the baud rate for printing is 74880. 
+
+
+
+--------------------
+
+Enviar paquetes 802.11 arbitrarios: https://github.com/Jeija/esp32-80211-tx
+
+--------------------
+
+Flashing binaries to serial port COM3 (app at offset 0x10000)...
+esptool.py v2.4.0
+Connecting....
+Chip is ESP8266EX
+Features: WiFi
+MAC: cc:50:e3:5d:6a:90
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 921600
+Changed.
+Configuring flash size...
+Compressed 7312 bytes to 5235...
+Wrote 7312 bytes (5235 compressed) at 0x00000000 in 0.1 seconds (effective 769.2 kbit/s)...
+Hash of data verified.
+Compressed 130848 bytes to 89808...
+Wrote 130848 bytes (89808 compressed) at 0x00010000 in 6.6 seconds (effective 159.0 kbit/s)...
+File  md5: df979450ddf5ef919f03f54a9cd495bb
+Flash md5: 97c72b44bffbfdbb1efa4a18593a2d87
+MD5 of 0xFF is d1fb50b48381cf683810ae15246f9f37
+
+A fatal error occurred: MD5 of file does not match data in flash!
+make: *** [/home/Reinoso/esp/ESP8266_RTOS_SDK/components/esptool_py/Makefile.projbuild:76: flash] Error 2
+
+
+
+No es defecto del chip. Lo causa la toolchain. Cambiando algunas líneas del programa se arregla.
+
+En el mismo programa, si se añade la línea 
+
+    ESP_LOGI(LOG_TAG, "Init done");
+
+ya no sucede.
+
+--------------------------------
+
+I2C:
+
+El I2C es por software y se hace con una lista enlazada.
+
+Primero se llama a `i2c_driver_install` indicando el número de puerto I2C_NUM. Así se asocia la configuración de pines.
+
+static esp_err_t i2c_init() {
+    i2c_config_t conf;
+    conf.mode = I2C_MODE_MASTER;
+    conf.sda_io_num = I2C_SDA_IO;
+    conf.sda_pullup_en = 1;
+    conf.scl_io_num = I2C_SCL_IO;
+    conf.scl_pullup_en = 1;
+    conf.clk_stretch_tick = 1; // probar
+	
+    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, conf.mode));
+    ESP_ERROR_CHECK(i2c_param_config(I2C_NUM, &conf));
+    return ESP_OK;
+}
+
+
+Módulo PCF8591
+
+I2C scan:
+
+Si el dispositivo no contesta, el puerto i2c queda ocupado porque i2c_master_cmd_begin falla al no recibir el ACK y ya no procesa el comando stop.
+
+Hay que llamarlo explícitamente.
+
+En el analizador lógico se ve hueco en el 0x91 mientras escribe el mensaje por puerto serie. ¿Se podría hacer a la vez poniéndolo en una cola de RTOS?
+ Write: 0x90
+ Read: 0x91
+
+----------------------
+
+Por GPIO2 parece que sale la misma información que por la UART durante el arranque a 74880 bauds.
+En GPIO0 hay datos a una frecuencia mayor (aprox 8MHz) pero no he podido determinar qué es.
+
+
+
+
+
+
+
+
 
 
 
