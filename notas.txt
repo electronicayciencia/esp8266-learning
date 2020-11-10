@@ -518,7 +518,7 @@ static esp_err_t i2c_init() {
 }
 
 
-Módulo PCF8591
+Módulo PCF8591, address 0x48
 
 I2C scan:
 
