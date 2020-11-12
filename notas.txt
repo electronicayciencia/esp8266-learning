@@ -536,6 +536,65 @@ Por GPIO2 parece que sale la misma información que por la UART durante el arran
 En GPIO0 hay datos a una frecuencia mayor (aprox 8MHz) pero no he podido determinar qué es.
 
 
+----------------------
+
+/* Hardware random number generator register */ 
+#define WDEV_RND_REG 0x60035144
+
+
+--------------------
+
+El ESP8266 no tiene contadores hardware para hacer un frecuencímetro. El esp32 sí.
+Tiene un generador de números aleatorios hardware. Registro WDEV_RND_REG 0x60035144
+
+ Tensilica Xtensa Diamond Standard 106Micro
+ 
+ https://ip.cadence.com/uploads/902/TIP_What_Why_How_Cust_Processors_WP_V3_FINAL-pdf
+
+
+-------------------
+
+SNTP (Simple NTP). Parte de la librería lwIP.
+
+http://www.nongnu.org/lwip
+
+-------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
