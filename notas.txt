@@ -659,6 +659,3 @@ curl https://openapi.emtmadrid.es/v2/transport/busemtmad/stops/2671/arrives/137/
 
 
 
-
-
-
