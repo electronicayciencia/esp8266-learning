@@ -554,17 +554,58 @@ Tiene un generador de números aleatorios hardware. Registro WDEV_RND_REG 0x6003
 
 -------------------
 
+ .text          0x401009fc       0x20 D:/tmp/esp/msys32/home/Reinoso/esp/ESP8266_RTOS_SDK/components/esp8266/lib\libhal.a(clock.o)
+                0x401009fc                xthal_get_ccount
+                0x40100a04                xthal_set_ccompare
+                0x40100a10                xthal_get_ccompare
+
+
+    $ ~/esp/xtensa-lx106-elf/bin/xtensa-lx106-elf-ar.exe x D:/tmp/esp/msys32/home/Reinoso/esp/ESP8266_RTOS_SDK/components/esp8266/lib/libhal.a
+ 
+Desensamblado:
+
+    $ ~/esp/xtensa-lx106-elf/bin/xtensa-lx106-elf-objdump.exe -d clock.o
+    Disassembly of section .text:
+    
+    00000000 <xthal_get_ccount>:
+       0:   03ea20          rsr.ccount      a2
+       3:   f00d            ret.n
+       5:   000000          ill
+
+
+
+-------------------
+
 SNTP (Simple NTP). Parte de la librería lwIP.
 
 http://www.nongnu.org/lwip
 
 -------------------
 
+Darse de alta. Registrar aplicación para consumir las APIs.
+
+https://openapi.emtmadrid.es/v1/mobilitylabs/user/login/
+X-ClientId:
+passKey:
 
 
 
+curl https://openapi.emtmadrid.es/v1/mobilitylabs/user/login/ -H "X-ClientId: $clientid" -H "passKey: $passkey"
+{"code": "01", "description": "Token d0abcc6 extend  into control-cache", "datetime": "2020-11-12T22:17:39.153133", "data": [{"nameApp": "espEyC", "levelApp": 0, "updatedAt": "2020-11-12T20:16:46.213000", "userName": "Electronicayciencia", "lastUpdate": {"$date": 1605214293761}, "idUser": "9283BAE", "priv": "U", "tokenSecExpiration": 86400, "email": "@gmail.com", "tokenDteExpiration": {"$date": 1605304293761}, "flagAdvise": false, "accessToken": "d0abcc6", "apiCounter": {"current": 13, "dailyUse": 250000, "owner": 0, "licenceUse": "Please mention EMT Madrid MobilityLabs as data source. Thank you and enjoy!"}, "username": "Electronicayciencia"}]}
 
 
+
+curl https://openapi.emtmadrid.es/v2/transport/busemtmad/stops/2671/arrives/137/ -H "Content-Type: application/json" -H "accessToken: $token" -d '
+{
+  "cultureInfo":"ES",
+  "Text_StopRequired_YN":"N",
+  "Text_EstimationsRequired_YN":"Y",
+  "Text_IncidencesRequired_YN":"N",
+  "DateTime_Referenced_Incidencies_YYYYMMDD":"20201111"
+}'
+
+
+{"code": "00", "description": "Data recovered  OK, (lapsed: 102 millsecs)", "datetime": "2020-11-12T22:30:28.917327", "data": [{"Arrive": [{"line": "137", "stop": "2671", "isHead": "False", "destination": "PUERTA HIERRO", "deviation": 0, "bus": 8861, "geometry": {"type": "Point", "coordinates": [-3.6964734264141583, 40.496700166721325]}, "estimateArrive": 888, "DistanceBus": 2775, "positionTypeBus": "0"}, {"line": "137", "stop": "2671", "isHead": "False", "destination": "PUERTA HIERRO", "deviation": 0, "bus": 8857, "geometry": {"type": "Point", "coordinates": [-3.685911475007972, 40.48363866031758]}, "estimateArrive": 2269, "DistanceBus": 7499, "positionTypeBus": "0"}], "StopInfo": [], "ExtraInfo": [], "Incident": {}}]}
 
 
 
