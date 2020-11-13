@@ -1,0 +1,7 @@
+/* Application configuration. May include sensible data. */
+
+#define CONFIG_WIFI_SSID   "myssid"
+#define CONFIG_WIFI_PASS   "mypassword"
+
+#define CONFIG_EMT_OPENAPI_CLIENTID "app clientid"
+#define CONFIG_EMT_OPENAPI_PASSKEY "app passkey"
