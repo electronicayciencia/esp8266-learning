@@ -59,10 +59,9 @@ static void https_get_task(void *pvParameters)
 
     while(1) {
         ESP_LOGI(TAG, "Waiting for WiFi...");
-        xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
-                            false, true, portMAX_DELAY);
-        
-        ESP_LOGI(TAG, "Connected to AP.");
+        wifi_wait_connected();        
+        ESP_LOGI(TAG, "Connected to AP!");
+
         esp_tls_cfg_t cfg = {
             .cacert_pem_buf  = server_root_cert_pem_start,
             .cacert_pem_bytes = server_root_cert_pem_end - server_root_cert_pem_start,
@@ -141,7 +140,7 @@ static void https_get_task(void *pvParameters)
 void app_main()
 {
     ESP_ERROR_CHECK( nvs_flash_init() );
-    initialise_wifi();
+    wifi_initialise();
     xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 5, NULL);
 }
 
