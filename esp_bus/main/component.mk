@@ -5,4 +5,4 @@
 
 # embed files from the "certs" directory as binary data symbols
 # in the app
-COMPONENT_EMBED_TXTFILES := server_root_cert.pem
+COMPONENT_EMBED_TXTFILES := httpbin_ca.pem

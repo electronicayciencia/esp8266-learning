@@ -1,3 +1,4 @@
-# Tests
+# EMT_BUS
 
-Project to try new things.
+Project to show in a LCD how long until the bus arrives. 
+Using *EMT Madrid MobilityLabs* as data source.

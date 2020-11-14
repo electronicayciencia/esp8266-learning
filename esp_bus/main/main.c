@@ -9,125 +9,99 @@ Based on https_request example.
 */
 #define TAG "main"
 
-
 #include <string.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/event_groups.h"
-//#include "esp_wifi.h"
-#include "esp_event_loop.h"
-#include "esp_log.h"
 #include "esp_system.h"
+#include "esp_log.h"
 #include "nvs_flash.h"
 
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include "lwip/netdb.h"
-#include "lwip/dns.h"
-
-#include "esp_tls.h"
+#include "esp_http_client.h"
 
 #include "config.h"
 #include "wifi.h"
 
+#define MAX_HTTP_RESPONSE_SIZE 2048
 
-extern EventGroupHandle_t wifi_event_group; // wifi.c
-extern int CONNECTED_BIT;                   // wifi.c
+char http_response[MAX_HTTP_RESPONSE_SIZE];
 
+/* Root certificate */
+extern const char pem_start[] asm("_binary_httpbin_ca_pem_start");
+//extern const char pem_start[] asm("_binary_howismyssl_ca_pem_start");
+//extern const char pem_start[] asm("_binary_emtmadrid_ca_pem_start");
 
-/* Constants that aren't configurable in menuconfig */
-#define WEB_SERVER "www.howsmyssl.com"
-#define WEB_PORT 443
-#define WEB_URL "https://www.howsmyssl.com/a/check"
-
-static const char *REQUEST = "GET " WEB_URL " HTTP/1.0\r\n"
-    "Host: "WEB_SERVER"\r\n"
-    "User-Agent: esp-idf/1.0 esp32\r\n"
-    "\r\n";
-
-/* Root cert for howsmyssl.com, taken from server_root_cert.pem */
-extern const uint8_t server_root_cert_pem_start[] asm("_binary_server_root_cert_pem_start");
-extern const uint8_t server_root_cert_pem_end[]   asm("_binary_server_root_cert_pem_end");
-    
-
-static void https_get_task(void *pvParameters)
+esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
-    char buf[512];
-    int ret, len;
+    static int readed = 0; // index inside http_response buffer
 
+    switch(evt->event_id) {
+        case HTTP_EVENT_ON_CONNECTED:
+            ESP_LOGD(TAG, "HTTP_EVENT_ON_CONNECTED");
+            readed = 0;
+            break;
+
+        case HTTP_EVENT_ON_DATA:
+            ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+
+            int remaining = MAX_HTTP_RESPONSE_SIZE - readed - 1;
+            int tocopy = 
+                remaining > evt->data_len ? evt->data_len : remaining;
+
+            memcpy(http_response + readed, evt->data, tocopy);
+            readed += tocopy;
+            http_response[readed] = 0; // zero terminated for now
+            ESP_LOGD(TAG, "Copied %d bytes.", tocopy);
+            break;
+
+        default:
+            break;
+    }
+
+    return ESP_OK;
+}
+
+
+
+
+static void https() {
+    esp_http_client_config_t config = {
+        .url = "https://httpbin.org/get",
+        .event_handler = _http_event_handler,
+        .cert_pem = pem_start,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    esp_err_t err = esp_http_client_perform(client);
+
+    if (err == ESP_OK) {
+        size_t r_size = esp_http_client_get_content_length(client);
+        ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %d",
+                esp_http_client_get_status_code(client), r_size);
+
+        if (r_size >= MAX_HTTP_RESPONSE_SIZE) {
+            ESP_LOGE(TAG, 
+                "HTTP response has been truncated :( (size: %d, max: %d",
+                r_size, MAX_HTTP_RESPONSE_SIZE);
+        }
+
+        printf("%s\n", http_response);
+
+    } else {
+        ESP_LOGE(TAG, "Error perform http request %d", err);
+    }
+    esp_http_client_cleanup(client);
+}
+
+
+static void https_get_task(void *pvParameters) {
     while(1) {
         ESP_LOGI(TAG, "Waiting for WiFi...");
         wifi_wait_connected();        
         ESP_LOGI(TAG, "Connected to AP!");
 
-        esp_tls_cfg_t cfg = {
-            .cacert_pem_buf  = server_root_cert_pem_start,
-            .cacert_pem_bytes = server_root_cert_pem_end - server_root_cert_pem_start,
-        };
-        
-        struct esp_tls *tls = esp_tls_conn_http_new(WEB_URL, &cfg);
-        
-        if(tls != NULL) {
-            ESP_LOGI(TAG, "Connection established...");
-        } else {
-            ESP_LOGE(TAG, "Connection failed...");
-            goto exit;
-        }
-        
-        size_t written_bytes = 0;
-        do {
-            ret = esp_tls_conn_write(tls, 
-                                     REQUEST + written_bytes, 
-                                     strlen(REQUEST) - written_bytes);
-            if (ret >= 0) {
-                ESP_LOGI(TAG, "%d bytes written", ret);
-                written_bytes += ret;
-            } else if (ret != ESP_TLS_ERR_SSL_WANT_READ  && ret != ESP_TLS_ERR_SSL_WANT_WRITE)
-            {
-                ESP_LOGE(TAG, "esp_tls_conn_write  returned 0x%x", ret);
-                goto exit;
-            }
-        } while(written_bytes < strlen(REQUEST));
 
-        ESP_LOGI(TAG, "Reading HTTP response...");
+        https();
 
-        do
-        {
-            len = sizeof(buf) - 1;
-            bzero(buf, sizeof(buf));
-            ret = esp_tls_conn_read(tls, (char *)buf, len);
-
-            if (ret == ESP_TLS_ERR_SSL_WANT_READ  || ret == ESP_TLS_ERR_SSL_WANT_WRITE)
-                continue;
-            
-            if(ret < 0)
-           {
-                ESP_LOGE(TAG, "esp_tls_conn_read  returned -0x%x", -ret);
-                break;
-            }
-
-            if(ret == 0)
-            {
-                ESP_LOGI(TAG, "connection closed");
-                break;
-            }
-
-            len = ret;
-            ESP_LOGD(TAG, "%d bytes read", len);
-            /* Print response directly to stdout as it is read */
-            for(int i = 0; i < len; i++) {
-                putchar(buf[i]);
-            }
-        } while(1);
-
-    exit:
-        esp_tls_conn_delete(tls);    
-        putchar('\n'); // JSON output doesn't have a newline at end
-
-        static int request_count;
-        ESP_LOGI(TAG, "Completed %d requests", ++request_count);
 
         for(int countdown = 10; countdown >= 0; countdown--) {
             ESP_LOGI(TAG, "%d...", countdown);
@@ -137,8 +111,7 @@ static void https_get_task(void *pvParameters)
     }
 }
 
-void app_main()
-{
+void app_main() {
     ESP_ERROR_CHECK( nvs_flash_init() );
     wifi_initialise();
     xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 5, NULL);
