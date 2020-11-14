@@ -118,15 +118,16 @@ esp_err_t emt_login(char *buffer, size_t len) {
         return ESP_FAIL;
     }
 
-    cJSON *code = cJSON_GetObjectItemCaseSensitive(api_response, "code");
-    if (code == NULL || 
-          (code->valueint != EMT_CODE_OK && 
-           code->valueint != EMT_CODE_LOGIN_OK)) {
-        ESP_LOGE(TAG, "EMT API code error:\n%s\n", http_response);
-
-        cJSON_Delete(api_response);
-        return ESP_FAIL;
-    }
+// Code type is string, valueint is always 0
+//    cJSON *code = cJSON_GetObjectItemCaseSensitive(api_response, "code");
+//    if (code == NULL || 
+//          (code->valueint != EMT_CODE_OK && 
+//           code->valueint != EMT_CODE_LOGIN_OK)) {
+//        ESP_LOGE(TAG, "EMT API code error:\n%s\n", http_response);
+//
+//        cJSON_Delete(api_response);
+//        return ESP_FAIL;
+//    }
 
     cJSON *data = cJSON_GetObjectItemCaseSensitive(api_response, "data");
     if (data == NULL || 
@@ -156,7 +157,7 @@ esp_err_t emt_login(char *buffer, size_t len) {
    Parameters:
       token: api token
       buses: pointer to an array of Bus
-      len: max len of buses in array
+      maxbuses: max number of buses in array
    Return:
       Number of buses if successful (may be 0)
       FAIL on error
@@ -164,7 +165,7 @@ esp_err_t emt_login(char *buffer, size_t len) {
       emtmadrid_pem_start
       http_response
  */
-int emt_arrive_times(char *token, Bus *buses, size_t len) {
+int emt_arrive_times(char *token, Bus *buses, size_t maxbuses) {
     esp_http_client_config_t config = {
         .url = EMT_ARRIVES_URL,
         .event_handler = _http_event_handler,
@@ -211,5 +212,71 @@ int emt_arrive_times(char *token, Bus *buses, size_t len) {
     }
 
     ESP_LOGD(TAG, "EMT API response:\n%s\n", http_response);
-    return 0;
+
+    /* JSON parsing looking for arrival times */
+
+    cJSON *api_response = cJSON_Parse(http_response);
+    if (api_response == NULL) {
+        ESP_LOGE(TAG, "Cannot parse JSON response:\n%s\n", http_response);
+        cJSON_Delete(api_response);
+        return FAIL;
+    }
+
+    cJSON *data = cJSON_GetObjectItemCaseSensitive(api_response, "data");
+    
+    if (data == NULL || 
+          !cJSON_IsArray(data) || 
+          !data->child || 
+          !cJSON_IsObject(data->child)) {
+        ESP_LOGE(TAG, "EMT API response error:\n%s\n", http_response);
+        cJSON_Delete(api_response);
+        return FAIL;
+    }
+    
+    cJSON *arrive = cJSON_GetObjectItemCaseSensitive(data->child, "Arrive");
+    if (arrive == NULL || !cJSON_IsArray(arrive)) {
+        ESP_LOGE(TAG, "EMT API response format error:\n%s\n", http_response);
+        cJSON_Delete(api_response);
+        return FAIL;
+    }
+
+    int i;
+    cJSON *bus = arrive->child;
+    for (i = 0; i <= maxbuses; i++) {
+        if (bus == NULL)
+            break;
+        
+        cJSON *number = cJSON_GetObjectItemCaseSensitive(bus, "bus");
+        cJSON *line = cJSON_GetObjectItemCaseSensitive(bus, "line");
+        cJSON *time = cJSON_GetObjectItemCaseSensitive(bus, "estimateArrive");
+        cJSON *distance = cJSON_GetObjectItemCaseSensitive(bus, "DistanceBus");
+        
+        if (!number || 
+            !line ||
+            !time ||
+            !distance) {
+
+            ESP_LOGE(TAG, "Incomplete bus data.");
+            cJSON_Delete(api_response);
+            return FAIL;
+        }
+
+        ESP_LOGD(TAG, "Bus found %d -> Number: %d, Line: %s, Time: %d, Distance: %d",
+            i,
+            number->valueint,
+            line->valuestring,
+            time->valueint,
+            distance->valueint);
+
+        buses[i].number = number->valueint;
+        buses[i].time = time->valueint;
+        buses[i].distance = distance->valueint;
+
+        strncpy(buses[i].line, line->valuestring, EMT_MAX_LINE_LEN);
+
+        bus = bus->next;
+    }
+
+    cJSON_Delete(api_response);
+    return i;
 }

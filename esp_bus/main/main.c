@@ -29,7 +29,7 @@ static void https_get_task(void *pvParameters) {
 
     while(1) {
         ESP_LOGI(TAG, "Waiting for WiFi...");
-        wifi_wait_connected();        
+        wifi_wait_connected();
         ESP_LOGI(TAG, "Connected to AP!");
 
         
@@ -38,7 +38,15 @@ static void https_get_task(void *pvParameters) {
 
             Bus buses[MAX_BUSES];
             int n = emt_arrive_times(token, buses, MAX_BUSES);
-            ESP_LOGI(TAG, "%d buses to arrive.", n);
+            ESP_LOGI(TAG, "%d buses to arrive:", n);
+            
+            int i;
+            for (i = 0; i < n; i++) {
+                ESP_LOGI(TAG, "Line %s at %d meters (%d seconds)",
+                    buses[i].line,
+                    buses[i].distance,
+                    buses[i].time);
+            }
         }
         else {
             ESP_LOGE(TAG, "Login call failed.");
