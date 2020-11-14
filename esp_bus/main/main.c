@@ -18,6 +18,8 @@ Based on https_request example.
 #include "nvs_flash.h"
 
 #include "esp_http_client.h"
+#include "cJSON.h"
+
 
 #include "esp_bus.h"
 #include "config.h"
@@ -65,8 +67,17 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 
 
 
-
-static esp_err_t emt_login(void) {
+/* Try to get a token from EMT API.
+   Parameters:
+      buffer: buffer to put the token into
+      len: length of the buffer
+   Return:
+      ESP_OK if successful
+   Globals:
+      emtmadrid_pem_start
+      http_response
+ */
+static esp_err_t emt_login(char *buffer, size_t len) {
     esp_http_client_config_t config = {
         .url = EMT_LOGIN_URL,
         .event_handler = _http_event_handler,
@@ -102,21 +113,61 @@ static esp_err_t emt_login(void) {
 
     } else {
         ESP_LOGE(TAG, "Error perform http request %d", err);
+        return ESP_FAIL;
     }
+
+    cJSON *api_response = cJSON_Parse(http_response);
+    if (api_response == NULL) {
+        ESP_LOGE(TAG, "Cannot parse JSON response:\n%s\n", http_response);
+        cJSON_Delete(api_response);
+        return ESP_FAIL;
+    }
+
+    cJSON *code = cJSON_GetObjectItemCaseSensitive(api_response, "code");
+    if (code == NULL || 
+          (code->valueint != EMT_CODE_OK && 
+           code->valueint != EMT_CODE_LOGIN_OK)) {
+        ESP_LOGE(TAG, "EMT API code error:\n%s\n", http_response);
+
+        cJSON_Delete(api_response);
+        return ESP_FAIL;
+    }
+
+    cJSON *data = cJSON_GetObjectItemCaseSensitive(api_response, "data");
+    if (data == NULL || 
+          !cJSON_IsArray(data) || 
+          !data->child || 
+          !cJSON_IsObject(data->child)) {
+        ESP_LOGE(TAG, "EMT API response error:\n%s\n", http_response);
+        cJSON_Delete(api_response);
+        return ESP_FAIL;
+    }
+    
+    cJSON *token = cJSON_GetObjectItemCaseSensitive(data->child, "accessToken");
+    if (token == NULL || !cJSON_IsString(token)) {
+        ESP_LOGE(TAG, "EMT API no token error:\n%s\n", http_response);
+        cJSON_Delete(api_response);
+        return ESP_FAIL;
+    }
+
+    strncpy(buffer, cJSON_GetStringValue(token), len);
+    cJSON_Delete(api_response);
 
     return ESP_OK;
 }
 
 
 static void https_get_task(void *pvParameters) {
+    char token[EMT_TOKEN_LEN];
+
     while(1) {
         ESP_LOGI(TAG, "Waiting for WiFi...");
         wifi_wait_connected();        
         ESP_LOGI(TAG, "Connected to AP!");
 
-
-        if (emt_login() == ESP_OK) {
-            ESP_LOGD(TAG, "Login call ok. Response:\n%s\n", http_response);
+        
+        if (emt_login(token, EMT_TOKEN_LEN) == ESP_OK) {
+            ESP_LOGI(TAG, "Got access token: %s", token);
         }
         else {
             ESP_LOGE(TAG, "Login call failed.");
