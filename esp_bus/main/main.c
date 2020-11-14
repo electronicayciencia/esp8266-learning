@@ -19,17 +19,19 @@ Based on https_request example.
 
 #include "esp_http_client.h"
 
+#include "esp_bus.h"
 #include "config.h"
 #include "wifi.h"
 
 #define MAX_HTTP_RESPONSE_SIZE 2048
 
+
 char http_response[MAX_HTTP_RESPONSE_SIZE];
 
 /* Root certificate */
-extern const char pem_start[] asm("_binary_httpbin_ca_pem_start");
-//extern const char pem_start[] asm("_binary_howismyssl_ca_pem_start");
-//extern const char pem_start[] asm("_binary_emtmadrid_ca_pem_start");
+extern const char httpbin_pem_start[] asm("_binary_httpbin_ca_pem_start");
+extern const char emtmadrid_pem_start[] asm("_binary_emtmadrid_ca_pem_start");
+
 
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
@@ -64,32 +66,45 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 
 
 
-static void https() {
+static esp_err_t emt_login(void) {
     esp_http_client_config_t config = {
-        .url = "https://httpbin.org/get",
+        .url = EMT_LOGIN_URL,
         .event_handler = _http_event_handler,
-        .cert_pem = pem_start,
+        .cert_pem = emtmadrid_pem_start,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
+
+    esp_http_client_set_header(client, EMT_LOGIN_CLIENT_HEADER, CONFIG_EMT_OPENAPI_CLIENTID);
+    esp_http_client_set_header(client, EMT_LOGIN_PASSWORD_HEADER, CONFIG_EMT_OPENAPI_PASSKEY);
+
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
         size_t r_size = esp_http_client_get_content_length(client);
+        int r_status  = esp_http_client_get_status_code(client);
+
+        esp_http_client_cleanup(client);
+
         ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %d",
-                esp_http_client_get_status_code(client), r_size);
+                r_status, r_size);
 
         if (r_size >= MAX_HTTP_RESPONSE_SIZE) {
             ESP_LOGE(TAG, 
-                "HTTP response has been truncated :( (size: %d, max: %d",
+                "HTTP response was too big :( (size: %d, max: %d)",
                 r_size, MAX_HTTP_RESPONSE_SIZE);
+            return ESP_FAIL;
         }
 
-        printf("%s\n", http_response);
+        if (r_status != 200) {
+            ESP_LOGE(TAG, "HTTP status error: %d", r_status);
+            return ESP_FAIL;
+        }
 
     } else {
         ESP_LOGE(TAG, "Error perform http request %d", err);
     }
-    esp_http_client_cleanup(client);
+
+    return ESP_OK;
 }
 
 
@@ -100,7 +115,12 @@ static void https_get_task(void *pvParameters) {
         ESP_LOGI(TAG, "Connected to AP!");
 
 
-        https();
+        if (emt_login() == ESP_OK) {
+            ESP_LOGD(TAG, "Login call ok. Response:\n%s\n", http_response);
+        }
+        else {
+            ESP_LOGE(TAG, "Login call failed.");
+        }
 
 
         for(int countdown = 10; countdown >= 0; countdown--) {
