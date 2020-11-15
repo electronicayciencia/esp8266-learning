@@ -691,6 +691,94 @@ Response:
 
 
 
+LCD: 20x4 o 16x2
+
+  1234567890123456
+ |----------------|
+1|················|
+2|················|
+ |----------------|
+
+  12345678901234567890
+ |--------------------|
+1|····················|
+2|····················|
+3|····················|
+4|····················|
+ |--------------------|
+
+
+
+  1234567890123456
+ |----------------|
+1|················|
+2|················|
+ |----------------|
+
+  12345678901234567890
+ |--------------------|
+1|Bus     Dist  Tiempo|
+2|00120   500m  1m 20s|
+3|10120  >12km    >15m|
+4|Hace 15s      P.1256|
+ |--------------------|
+
+
+De numero de bus:
+10000
+00120
+
+Representaciones de tiempo:
+   60s
+    5m
+1m 20s
+  >15m
+
+De distancia:
+ 500m
+2.5km
+>12km
+
+Ultima actualizacion:
+Dom 15/11  14:10:32
+
+Bus     Dist  Tiempo
+00120   500m  1m 20s
+10120  >12km    >15m
+Hace 15s      P.1256
+
+
+
+--------------------------
+
+LCD. Portar softlcd de wiringpi a esp
+
+El módulo se ilumina, se enciende o se apaga, pero no salen caracteres.
+
+Quito leds por si fuera tensiones en las líneas de I2C.
+
+Depuración con saleae parece todo bien.
+Hago que esp escriba comandos de i2cli.
+Conecto LCD a raspberry y purebo ejemplo 20x4: funciona.
+Lanzo comandos de ESP en raspberry con i2cli: funciona.
+Conecto LCD a 3.3v y lanzo ejemplo: no funciona.
+
+El módulo LCD no funciona a 3.3v
+
+En ESP, si pongo el debug funciona, si lo quito salen caracteres raros. problema de delay
+
+Print ABCD función, pero el ejemplo de 4 líneas no. Salen caracters raros.
+
+Aumento retardo en el clear.
+
+Si pongo el clear antes del print ABCD salen caracteres raros.
+
+Si activo el debug en el bucle de I2C, funciona bien. Debe ser por el I2C del ESP.
+
+--------------------------
+
+
+
 
 
 

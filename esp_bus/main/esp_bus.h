@@ -26,3 +26,5 @@
 
 #define MAX_BUSES 2
 
+#define I2C_SCL_IO 0        
+#define I2C_SDA_IO 2 

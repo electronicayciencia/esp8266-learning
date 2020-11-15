@@ -23,6 +23,8 @@ Based on https_request example.
 #include "wifi.h"
 #include "http_api.h"
 
+#include "soft_lcd.h"
+
 
 static void get_bus_times_task(void *pvParameters) {
     char token[EMT_TOKEN_LEN];
@@ -77,8 +79,36 @@ static void get_bus_times_task(void *pvParameters) {
 }
 
 void app_main() {
-    ESP_ERROR_CHECK( nvs_flash_init() );
-    wifi_initialise();
-    xTaskCreate(&get_bus_times_task, "get_bus_times_task", 8192, NULL, 5, NULL);
+    //ESP_ERROR_CHECK( nvs_flash_init() );
+    //wifi_initialise();
+    //xTaskCreate(&get_bus_times_task, "get_bus_times_task", 8192, NULL, 5, NULL);
+
+
+    /* Wait for startup GIPO party */ 
+    //vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    lcd_t *lcd = lcd_create(I2C_SCL_IO, I2C_SDA_IO, 0x27, 4);
+ 
+    if (lcd == NULL) {
+        ESP_LOGE(TAG, "Cannot set-up LCD.");
+    }
+    else {
+
+        while(true) {
+            //lcd_reset(lcd);
+            lcd_clear(lcd);
+            lcd_print(lcd, "ABCD");
+            vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+            lcd_clear(lcd);
+            lcd_print(lcd, "This is line one.\n");
+	        lcd_print(lcd, "This is line two.\n");
+	        lcd_print(lcd, "This is line three.\n");
+	        lcd_print(lcd, "This is line four.\n");
+            //lcd_printf(lcd, "Random:\n\n   %d", rand());
+
+            vTaskDelay(2000 / portTICK_PERIOD_MS);
+        }
+    }
 }
 
