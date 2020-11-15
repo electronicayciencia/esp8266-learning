@@ -40,6 +40,7 @@ static void https_get_task(void *pvParameters) {
             int n = emt_arrive_times(token, buses, MAX_BUSES);
             ESP_LOGI(TAG, "%d buses to arrive:", n);
             
+            
             int i;
             for (i = 0; i < n; i++) {
                 ESP_LOGI(TAG, "Line %s at %d meters (%d seconds)",

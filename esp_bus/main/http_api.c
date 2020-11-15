@@ -15,6 +15,7 @@
 #include "esp_bus.h"
 #include "config.h"
 #include "wifi.h"
+#include "http_api.h"
 
 #define MAX_HTTP_RESPONSE_SIZE 2048
 char http_response[MAX_HTTP_RESPONSE_SIZE];
@@ -118,16 +119,16 @@ esp_err_t emt_login(char *buffer, size_t len) {
         return ESP_FAIL;
     }
 
-// Code type is string, valueint is always 0
-//    cJSON *code = cJSON_GetObjectItemCaseSensitive(api_response, "code");
-//    if (code == NULL || 
-//          (code->valueint != EMT_CODE_OK && 
-//           code->valueint != EMT_CODE_LOGIN_OK)) {
-//        ESP_LOGE(TAG, "EMT API code error:\n%s\n", http_response);
-//
-//        cJSON_Delete(api_response);
-//        return ESP_FAIL;
-//    }
+    // Code type is string, valueint is always 0
+    cJSON *code = cJSON_GetObjectItemCaseSensitive(api_response, "code");
+    if (code == NULL || 
+          (atoi(code->valuestring) != EMT_CODE_OK && 
+           atoi(code->valuestring) != EMT_CODE_LOGIN_OK)) {
+        ESP_LOGE(TAG, "EMT API code error:\n%s\n", http_response);
+
+        cJSON_Delete(api_response);
+        return ESP_FAIL;
+    }
 
     cJSON *data = cJSON_GetObjectItemCaseSensitive(api_response, "data");
     if (data == NULL || 
@@ -159,7 +160,7 @@ esp_err_t emt_login(char *buffer, size_t len) {
       buses: pointer to an array of Bus
       maxbuses: max number of buses in array
    Return:
-      Number of buses if successful (may be 0)
+      Positive or 0 number of buses if successful
       FAIL on error
    Globals:
       emtmadrid_pem_start
@@ -218,6 +219,22 @@ int emt_arrive_times(char *token, Bus *buses, size_t maxbuses) {
     cJSON *api_response = cJSON_Parse(http_response);
     if (api_response == NULL) {
         ESP_LOGE(TAG, "Cannot parse JSON response:\n%s\n", http_response);
+        cJSON_Delete(api_response);
+        return FAIL;
+    }
+
+    // Code type is string, valueint is always 0
+    cJSON *code = cJSON_GetObjectItemCaseSensitive(api_response, "code");
+    if (code == NULL) {
+        ESP_LOGE(TAG, "EMT API format error (no code):\n%s\n", http_response);
+        cJSON_Delete(api_response);
+        return FAIL;
+    }   
+    
+    int codenum = atoi(code->valuestring);
+
+    if (codenum != EMT_CODE_OK) {
+        ESP_LOGE(TAG, "EMT API response not ok. Error code: %d", codenum);
         cJSON_Delete(api_response);
         return FAIL;
     }
