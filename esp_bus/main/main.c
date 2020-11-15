@@ -24,23 +24,39 @@ Based on https_request example.
 #include "http_api.h"
 
 
-static void https_get_task(void *pvParameters) {
+static void get_bus_times_task(void *pvParameters) {
     char token[EMT_TOKEN_LEN];
+    bool is_last_token_valid = false;
+    Bus buses[MAX_BUSES];
 
-    while(1) {
+    while(true) {
         ESP_LOGI(TAG, "Waiting for WiFi...");
         wifi_wait_connected();
-        ESP_LOGI(TAG, "Connected to AP!");
+        ESP_LOGI(TAG, "WiFi available.");
 
+        /* Login */
+        while (
+            is_last_token_valid == false && 
+            emt_login(token, EMT_TOKEN_LEN) != ESP_OK) {
+
+            ESP_LOGW(TAG, "Login call failed. Waiting for retry...");
+            vTaskDelay(10000 / portTICK_PERIOD_MS);
+        }
+        ESP_LOGI(TAG, "Access token: %s", token);
+
+
+        /* Get times */
+        int n = emt_arrive_times(token, buses, MAX_BUSES);
+
+        ESP_LOGI(TAG, "%d buses to arrive:", n);
         
-        if (emt_login(token, EMT_TOKEN_LEN) == ESP_OK) {
-            ESP_LOGI(TAG, "Got access token: %s", token);
+        if (n < 0) {
+            ESP_LOGW(TAG, "API call failed. Getting new token.");
+            is_last_token_valid = false;
+        }
+        else {
+            is_last_token_valid = true;
 
-            Bus buses[MAX_BUSES];
-            int n = emt_arrive_times(token, buses, MAX_BUSES);
-            ESP_LOGI(TAG, "%d buses to arrive:", n);
-            
-            
             int i;
             for (i = 0; i < n; i++) {
                 ESP_LOGI(TAG, "Line %s at %d meters (%d seconds)",
@@ -49,23 +65,20 @@ static void https_get_task(void *pvParameters) {
                     buses[i].time);
             }
         }
-        else {
-            ESP_LOGE(TAG, "Login call failed.");
-        }
-
-
+    
 
         for(int countdown = 10; countdown >= 0; countdown--) {
-            ESP_LOGI(TAG, "%d...", countdown);
+            ESP_LOGD(TAG, "%d...", countdown);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
-        ESP_LOGI(TAG, "Starting again!");
+
+        ESP_LOGD(TAG, "Starting again!");
     }
 }
 
 void app_main() {
     ESP_ERROR_CHECK( nvs_flash_init() );
     wifi_initialise();
-    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 5, NULL);
+    xTaskCreate(&get_bus_times_task, "get_bus_times_task", 8192, NULL, 5, NULL);
 }
 
