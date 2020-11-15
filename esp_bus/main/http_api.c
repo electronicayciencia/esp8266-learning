@@ -259,7 +259,7 @@ int emt_arrive_times(char *token, Bus *buses, size_t maxbuses) {
 
     int i;
     cJSON *bus = arrive->child;
-    for (i = 0; i <= maxbuses; i++) {
+    for (i = 0; i < maxbuses; i++) {
         if (bus == NULL)
             break;
         
