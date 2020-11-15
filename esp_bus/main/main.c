@@ -95,10 +95,9 @@ void app_main() {
     else {
 
         while(true) {
-            //lcd_reset(lcd);
-            lcd_clear(lcd);
-            lcd_print(lcd, "ABCD");
-            vTaskDelay(2000 / portTICK_PERIOD_MS);
+            //lcd_clear(lcd);
+            //lcd_print(lcd, "ABCD");
+            //vTaskDelay(2000 / portTICK_PERIOD_MS);
 
             lcd_clear(lcd);
             lcd_print(lcd, "This is line one.\n");

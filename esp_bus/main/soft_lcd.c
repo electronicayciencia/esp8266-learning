@@ -113,8 +113,8 @@ void lcd_home (lcd_t *lcd) {
 
 void lcd_clear (lcd_t *lcd) {
 	lcd_raw(lcd, LCD_WRITE, LCD_CMD_CLEAR);
-	vTaskDelay(2 / portTICK_PERIOD_MS);
-	ESP_LOGD("i2cli","t2");
+	vTaskDelay(10 / portTICK_PERIOD_MS);
+	//ESP_LOGD("i2cli","t2");
 }
 
 /* Convenient shortcuts */
@@ -169,23 +169,25 @@ void lcd_pos_raw(lcd_t *lcd, int pos) {
 
 /* Set LCD controller into a known state and set 4 bit mode */
 void lcd_reset (lcd_t *lcd) {
-	vTaskDelay(45 / portTICK_PERIOD_MS);
 	//ESP_LOGD("i2cli","t45");
 	_pcf8574_put(lcd, LCD_D5 | LCD_D4);
+	vTaskDelay(45 / portTICK_PERIOD_MS);
 
-	vTaskDelay(20 / portTICK_PERIOD_MS);
 	//ESP_LOGD("i2cli","t5");
 	_pcf8574_put(lcd, LCD_D5 | LCD_D4);
-
 	vTaskDelay(20 / portTICK_PERIOD_MS);
+
 	//ESP_LOGD("i2cli","t2");
 	_pcf8574_put(lcd, LCD_D5 | LCD_D4);
+	vTaskDelay(20 / portTICK_PERIOD_MS);
 
 
 	/* we assume pcf8574 and 4bit mode for now */
 	if (lcd->fcn_set & LCD_FCN_8BIT) return;
 
 	_pcf8574_put(lcd, LCD_CMD_FCN_SET | LCD_FCN_4BIT);
+	vTaskDelay(20 / portTICK_PERIOD_MS);
+
 }
 
 /* Printf to LCD screen  */
@@ -374,11 +376,11 @@ void _pcf8574_put (lcd_t *lcd, int lines) {
 	esp_err_t ret;
 	i2c_cmd_handle_t cmd;
 
-	ESP_LOGD("i2cli", "s");
-	ESP_LOGD("i2cli","w%02x", lcd->_addr << 1 | I2C_WRITE);
-	ESP_LOGD("i2cli","w%02x", lines | LCD_ENABLED);
-	ESP_LOGD("i2cli","w%02x", lines);
-	ESP_LOGD("i2cli","p");
+	//ESP_LOGD("i2cli", "s");
+	//ESP_LOGD("i2cli","w%02x", lcd->_addr << 1 | I2C_WRITE);
+	//ESP_LOGD("i2cli","w%02x", lines | LCD_ENABLED);
+	//ESP_LOGD("i2cli","w%02x", lines);
+	//ESP_LOGD("i2cli","p");
 
 
 	cmd = i2c_cmd_link_create();
