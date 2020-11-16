@@ -16,12 +16,15 @@
 #include <unistd.h>
 #include <stdarg.h>
 
-#include "freertos/FreeRTOS.h" // portTICK_PERIOD_MS
-#include "freertos/task.h" // vTaskDelay
+#include "time.h" // usleep
+
+//#include "freertos/FreeRTOS.h" // portTICK_PERIOD_MS
+//#include "freertos/task.h" // vTaskDelay
 #include "driver/i2c.h"
 #include "esp_log.h"
 
 #include "soft_lcd.h"
+
 
 static int i2c_init(int scl, int sda) {
 	int i2c_num = 0; // only one port for now
@@ -113,7 +116,7 @@ void lcd_home (lcd_t *lcd) {
 
 void lcd_clear (lcd_t *lcd) {
 	lcd_raw(lcd, LCD_WRITE, LCD_CMD_CLEAR);
-	vTaskDelay(10 / portTICK_PERIOD_MS);
+	usleep(5000);
 	//ESP_LOGD("i2cli","t2");
 }
 
@@ -171,22 +174,22 @@ void lcd_pos_raw(lcd_t *lcd, int pos) {
 void lcd_reset (lcd_t *lcd) {
 	//ESP_LOGD("i2cli","t45");
 	_pcf8574_put(lcd, LCD_D5 | LCD_D4);
-	vTaskDelay(45 / portTICK_PERIOD_MS);
+	usleep(45000);
+
+	//ESP_LOGD("i2cli","t45");
+	_pcf8574_put(lcd, LCD_D5 | LCD_D4);
+	usleep(45000);
 
 	//ESP_LOGD("i2cli","t5");
 	_pcf8574_put(lcd, LCD_D5 | LCD_D4);
-	vTaskDelay(20 / portTICK_PERIOD_MS);
-
-	//ESP_LOGD("i2cli","t2");
-	_pcf8574_put(lcd, LCD_D5 | LCD_D4);
-	vTaskDelay(20 / portTICK_PERIOD_MS);
+	usleep(5000);
 
 
 	/* we assume pcf8574 and 4bit mode for now */
 	if (lcd->fcn_set & LCD_FCN_8BIT) return;
 
 	_pcf8574_put(lcd, LCD_CMD_FCN_SET | LCD_FCN_4BIT);
-	vTaskDelay(20 / portTICK_PERIOD_MS);
+	//usleep(4000);
 
 }
 

@@ -85,7 +85,7 @@ void app_main() {
 
 
     /* Wait for startup GIPO party */ 
-    //vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
 
     lcd_t *lcd = lcd_create(I2C_SCL_IO, I2C_SDA_IO, 0x27, 4);
  
@@ -103,8 +103,8 @@ void app_main() {
             lcd_print(lcd, "This is line one.\n");
 	        lcd_print(lcd, "This is line two.\n");
 	        lcd_print(lcd, "This is line three.\n");
-	        lcd_print(lcd, "This is line four.\n");
-            //lcd_printf(lcd, "Random:\n\n   %d", rand());
+	        //lcd_print(lcd, "This is line four.\n");
+            lcd_printf(lcd, "Random: %06d", rand());
 
             vTaskDelay(2000 / portTICK_PERIOD_MS);
         }
