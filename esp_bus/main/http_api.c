@@ -166,7 +166,7 @@ esp_err_t emt_login(char *buffer, size_t len) {
       emtmadrid_pem_start
       http_response
  */
-int emt_arrive_times(char *token, Bus *buses, size_t maxbuses) {
+int emt_arrive_times(char *token, bus_t *buses, size_t maxbuses) {
     esp_http_client_config_t config = {
         .url = EMT_ARRIVES_URL,
         .event_handler = _http_event_handler,
