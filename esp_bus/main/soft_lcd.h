@@ -104,6 +104,7 @@ void lcd_init(lcd_t *lcd);
 
 void lcd_printf(lcd_t *lcd, const char* format, ... );
 void lcd_print(lcd_t *lcd, char *s);
+void lcd_putc(lcd_t *lcd, char c);
 void lcd_pos(lcd_t *lcd, int row, int col);
 void lcd_home(lcd_t *lcd);
 void lcd_clear(lcd_t *lcd);

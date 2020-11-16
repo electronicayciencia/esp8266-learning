@@ -222,11 +222,15 @@ void lcd_print(lcd_t *lcd, char *instr) {
 		}
 		else {
 			//ESP_LOGD(TAG, "Char: %02x\n", s[i]);
-			lcd_raw(lcd, LCD_WRITE | LCD_RS, s[i]);
+			lcd_putc(lcd, s[i]);
 		}
 	}
 
 	if (lcd->replace_UTF8_chars) free(s);
+}
+
+void lcd_putc(lcd_t *lcd, char c) {
+	lcd_raw(lcd, LCD_WRITE | LCD_RS, c);
 }
 
 /* Create characters in the CGRAM table
