@@ -22,14 +22,37 @@ Based on https_request example.
 #include "config.h"
 #include "wifi.h"
 #include "http_api.h"
+#include "lcd.h"
 
-#include "soft_lcd.h"
+#define NOBUS_LINE "         -          "
+#define NOBUS_LINE_LEN 20
+
+/* lcd_ram maps the LCD character memory.
+   Each part of the program alters its reserved space.
+   Every second, the contets of this variable
+   are transfer to the physical LCD device. */
+char lcd_ram[LCD_LEN+1];
 
 
-static void get_bus_times_task(void *pvParameters) {
+
+/* Copy LCD RAM to physical LCD in a periodic way */
+void update_lcd_physical_task(void *pvParameters) {
+    while(true) {
+        lcd_wait_data_stable();
+        ESP_LOGD(TAG, "LCD RAM contents: |%s|", lcd_ram);
+        update_lcd_physical(lcd_ram);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
+
+
+
+
+static void update_bus_times_task(void *pvParameters) {
     char token[EMT_TOKEN_LEN];
     bool is_last_token_valid = false;
-    Bus buses[MAX_BUSES];
+    bus_t buses[MAX_BUSES];
 
     while(true) {
         ESP_LOGI(TAG, "Waiting for WiFi...");
@@ -68,6 +91,31 @@ static void get_bus_times_task(void *pvParameters) {
             }
         }
     
+        /* Update LCD for times */
+
+        lcd_data_unstable(); // lock LCD refresh
+
+        if (n > 0) {
+            format_busnumber(buses[0].number, lcd_ram+LCD_LINE_2);
+            format_distance(buses[0].distance, lcd_ram+LCD_LINE_2+7);
+            format_time(buses[0].time, lcd_ram+LCD_LINE_2+14);
+        }
+        else {
+            memcpy(lcd_ram+LCD_LINE_2, NOBUS_LINE, NOBUS_LINE_LEN);
+        }
+
+        if (n > 1) {
+            format_busnumber(buses[1].number, lcd_ram+LCD_LINE_3);
+            format_distance(buses[1].distance, lcd_ram+LCD_LINE_3+7);
+            format_time(buses[1].time, lcd_ram+LCD_LINE_3+14);
+        }
+        else {
+            memcpy(lcd_ram+LCD_LINE_3, NOBUS_LINE, NOBUS_LINE_LEN);
+        }
+
+        lcd_data_stable(); // unlock LCD refresh
+
+        /* Repeat */
 
         for(int countdown = 10; countdown >= 0; countdown--) {
             ESP_LOGD(TAG, "%d...", countdown);
@@ -78,36 +126,29 @@ static void get_bus_times_task(void *pvParameters) {
     }
 }
 
+
+
 void app_main() {
-    //ESP_ERROR_CHECK( nvs_flash_init() );
-    //wifi_initialise();
-    //xTaskCreate(&get_bus_times_task, "get_bus_times_task", 8192, NULL, 5, NULL);
 
+    ESP_ERROR_CHECK( nvs_flash_init() );
+    wifi_initialise();
 
-    /* Wait for startup GIPO party */ 
+    /* Wait for GPIO startup party */ 
     vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    lcd_t *lcd = lcd_create(I2C_SCL_IO, I2C_SDA_IO, 0x27, 4);
- 
-    if (lcd == NULL) {
-        ESP_LOGE(TAG, "Cannot set-up LCD.");
-    }
-    else {
+    ESP_ERROR_CHECK(lcd_initialise(I2C_SCL_IO, I2C_SDA_IO));
+    
+    lcd_data_unstable();
+    memset(lcd_ram,' ', LCD_LEN);
+    memcpy(lcd_ram,            "Bus#    Dist  Tiempo", 20);
+    //memcpy(lcd_ram+LCD_LINE_2, "Cargando tiempos... ", 30);
+    lcd_data_stable();
 
-        while(true) {
-            //lcd_clear(lcd);
-            //lcd_print(lcd, "ABCD");
-            //vTaskDelay(2000 / portTICK_PERIOD_MS);
+    lcd_ram[LCD_LEN] = 0;
 
-            lcd_clear(lcd);
-            lcd_print(lcd, "This is line one.\n");
-	        lcd_print(lcd, "This is line two.\n");
-	        lcd_print(lcd, "This is line three.\n");
-	        //lcd_print(lcd, "This is line four.\n");
-            lcd_printf(lcd, "Random: %06d", rand());
 
-            vTaskDelay(2000 / portTICK_PERIOD_MS);
-        }
-    }
+    xTaskCreate(&update_bus_times_task, "update_bus_times_task", 8192, NULL, 5, NULL);
+    xTaskCreate(&update_lcd_physical_task, "update_lcd_physical_task", 2048, NULL, 5, NULL);
+
 }
 

@@ -689,7 +689,7 @@ Response:
   ]
 }
 
-
+-------------------------
 
 LCD: 20x4 o 16x2
 
@@ -763,22 +763,29 @@ Conecto LCD a raspberry y purebo ejemplo 20x4: funciona.
 Lanzo comandos de ESP en raspberry con i2cli: funciona.
 Conecto LCD a 3.3v y lanzo ejemplo: no funciona.
 
-El módulo LCD no funciona a 3.3v
+El módulo LCD no funciona a 3.3v (https://www.element14.com/community/groups/roadtest/blog/2019/06/15/converting-5v-lcds-to-33v)
 
+Basura en LCD.
 En ESP, si pongo el debug funciona, si lo quito salen caracteres raros. problema de delay
-
 Print ABCD función, pero el ejemplo de 4 líneas no. Salen caracters raros.
-
 Aumento retardo en el clear.
-
 Si pongo el clear antes del print ABCD salen caracteres raros.
-
 Si activo el debug en el bucle de I2C, funciona bien. Debe ser por el I2C del ESP.
+Es por el delay en lcd_clear. Poniendo 10ms ya no pasa.
 
 --------------------------
 
 
 
+Al conectar la pantalla da errores la wifi.
+Cambio a la wifi que no es de invitados: falla también.
+Reinicio el router: falla también.
+Podría ser por bajada de tensión, quito la LCD: funciona.
+Pongo condensador: falla también.
+Quito positivo de LCD, pero dejo el negativo: falla también.
+Quito ambos: funciona.
+
+Moviendo los cables lejos de la antena funciona: eran interferencias.
 
 
 
