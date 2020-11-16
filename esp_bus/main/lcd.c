@@ -140,3 +140,46 @@ void format_time(int time, char *out) {
     memcpy(out, buff, 6);
 }
 
+/* Format the elapsed number of seconds.
+   Input: 
+     seconds
+     buffer (3 pos) non zero terminated
+   Output format examples:
+   1s· (59s or below)
+   1m· (between 60 and 9*60 - 1 )
+   >9m (9*60s or above)
+
+*/
+void format_elapsed(int s, char *out) {
+    char buff[4]; // this is zero terminated
+    int m = s/60;
+
+    if (s < 60) {
+        snprintf(buff, 4, "%ds", s);
+    }
+    else if (s >= 60 && s < 9*60) {
+        snprintf(buff, 4, "%dm", m);
+    }
+    else {
+        snprintf(buff, 4, ">9m");
+    }
+
+    // fill final space if needed
+    if (buff[2] == 0)
+        buff[2] = ' ';
+
+    memcpy(out, buff, 3);
+}
+
+/* Format the bus stop and put it in a memory address.
+   Input: 
+     busstop
+     buffer (4 pos) non zero terminated
+   Output format examples:
+   ··123
+*/
+void format_busstop(int number, char *out) {
+    char buff[5]; // this is zero terminated
+    snprintf(buff, 5, "%04d", number);
+    memcpy(out, buff, 4);
+}

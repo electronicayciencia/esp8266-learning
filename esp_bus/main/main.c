@@ -16,7 +16,7 @@ Based on https_request example.
 #include "esp_system.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-
+#include "time.h"
 
 #include "esp_bus.h"
 #include "config.h"
@@ -32,6 +32,7 @@ Based on https_request example.
    Every second, the contets of this variable
    are transfer to the physical LCD device. */
 char lcd_ram[LCD_LEN+1];
+time_t last_read_time = 0;
 
 
 
@@ -45,7 +46,17 @@ void update_lcd_physical_task(void *pvParameters) {
     }
 }
 
-
+/* Update the age of the shown data in seconds */
+void update_elapsed_task(void *pvParameters) {
+    while(true) {
+        lcd_data_unstable();
+        format_elapsed(
+            time(NULL)-last_read_time, 
+            lcd_ram+LCD_LINE_4+5);
+        lcd_data_stable();
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
 
 
 
@@ -73,23 +84,26 @@ static void update_bus_times_task(void *pvParameters) {
         /* Get times */
         int n = emt_arrive_times(token, buses, MAX_BUSES);
 
+        last_read_time = time(NULL);
+
         ESP_LOGI(TAG, "%d buses to arrive:", n);
         
         if (n < 0) {
             ESP_LOGW(TAG, "API call failed. Getting new token.");
             is_last_token_valid = false;
+            continue;
         }
-        else {
-            is_last_token_valid = true;
 
-            int i;
-            for (i = 0; i < n; i++) {
-                ESP_LOGI(TAG, "Line %s at %d meters (%d seconds)",
-                    buses[i].line,
-                    buses[i].distance,
-                    buses[i].time);
-            }
+        is_last_token_valid = true;
+
+        int i;
+        for (i = 0; i < n; i++) {
+            ESP_LOGI(TAG, "Line %s at %d meters (%d seconds)",
+                buses[i].line,
+                buses[i].distance,
+                buses[i].time);
         }
+
     
         /* Update LCD for times */
 
@@ -141,14 +155,18 @@ void app_main() {
     lcd_data_unstable();
     memset(lcd_ram,' ', LCD_LEN);
     memcpy(lcd_ram,            "Bus#    Dist  Tiempo", 20);
-    //memcpy(lcd_ram+LCD_LINE_2, "Cargando tiempos... ", 30);
+    memcpy(lcd_ram+LCD_LINE_2, NOBUS_LINE, NOBUS_LINE_LEN);   
+    memcpy(lcd_ram+LCD_LINE_3, NOBUS_LINE, NOBUS_LINE_LEN);   
+    memcpy(lcd_ram+LCD_LINE_4, "Hace          P.    ", 20);
+    format_busstop(atoi(BUS_STOP), lcd_ram+LCD_LINE_4+16);
     lcd_data_stable();
 
     lcd_ram[LCD_LEN] = 0;
 
 
     xTaskCreate(&update_bus_times_task, "update_bus_times_task", 8192, NULL, 5, NULL);
-    xTaskCreate(&update_lcd_physical_task, "update_lcd_physical_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&update_lcd_physical_task, "update_lcd_physical_task", 2048, NULL, 6, NULL);
+    xTaskCreate(&update_elapsed_task, "update_elapsed_task", 2048, NULL, 6, NULL);
 
 }
 
