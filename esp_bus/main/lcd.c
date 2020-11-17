@@ -183,6 +183,19 @@ void format_elapsed(int s, char *out) {
 */
 void format_busstop(int number, char *out) {
     char buff[5]; // this is zero terminated
-    snprintf(buff, 5, "%04d", number);
+    snprintf(buff, 5, "%4d", number);
     memcpy(out, buff, 4);
+}
+
+/* Format the bus line and put it in a memory address.
+   Input: 
+     line
+     buffer (3 pos) non zero terminated
+   Output format examples:
+   23·
+*/
+void format_busline(char *line, char *out) {
+    char buff[4]; // this is zero terminated
+    snprintf(buff, 4, "%3s", line);
+    memcpy(out, buff, 3);
 }

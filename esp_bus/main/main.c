@@ -54,7 +54,7 @@ void update_elapsed_task(void *pvParameters) {
             time(NULL)-last_read_time, 
             lcd_ram+LCD_LINE_4+5);
         lcd_data_stable();
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 
@@ -66,9 +66,11 @@ static void update_bus_times_task(void *pvParameters) {
     bus_t buses[MAX_BUSES];
 
     while(true) {
-        ESP_LOGI(TAG, "Waiting for WiFi...");
+        ESP_LOGI(TAG, "Retrieving EMT data.");
+        
+        ESP_LOGD(TAG, "Waiting for WiFi...");
         wifi_wait_connected();
-        ESP_LOGI(TAG, "WiFi available.");
+        ESP_LOGD(TAG, "WiFi available.");
 
         /* Login */
         while (
@@ -78,7 +80,7 @@ static void update_bus_times_task(void *pvParameters) {
             ESP_LOGW(TAG, "Login call failed. Waiting for retry...");
             vTaskDelay(10000 / portTICK_PERIOD_MS);
         }
-        ESP_LOGI(TAG, "Access token: %s", token);
+        ESP_LOGD(TAG, "Access token: %s", token);
 
 
         /* Get times */
@@ -131,12 +133,11 @@ static void update_bus_times_task(void *pvParameters) {
 
         /* Repeat */
 
-        for(int countdown = 10; countdown >= 0; countdown--) {
+        /*for(int countdown = 10; countdown >= 0; countdown--) {
             ESP_LOGD(TAG, "%d...", countdown);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }
-
-        ESP_LOGD(TAG, "Starting again!");
+        }*/
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -154,11 +155,16 @@ void app_main() {
     
     lcd_data_unstable();
     memset(lcd_ram,' ', LCD_LEN);
+    //                          12345678901234567890
+    //                         |--------------------|
     memcpy(lcd_ram,            "Bus#    Dist  Tiempo", 20);
     memcpy(lcd_ram+LCD_LINE_2, NOBUS_LINE, NOBUS_LINE_LEN);   
     memcpy(lcd_ram+LCD_LINE_3, NOBUS_LINE, NOBUS_LINE_LEN);   
-    memcpy(lcd_ram+LCD_LINE_4, "Hace          P.    ", 20);
+    memcpy(lcd_ram+LCD_LINE_4, "Hace --s  L--- P----", 20);
+
     format_busstop(atoi(BUS_STOP), lcd_ram+LCD_LINE_4+16);
+    format_busline(BUS_LINE, lcd_ram+LCD_LINE_4+11);
+
     lcd_data_stable();
 
     lcd_ram[LCD_LEN] = 0;
