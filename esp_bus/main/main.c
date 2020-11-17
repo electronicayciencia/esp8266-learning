@@ -40,9 +40,9 @@ time_t last_read_time = 0;
 void update_lcd_physical_task(void *pvParameters) {
     while(true) {
         lcd_wait_data_stable();
-        ESP_LOGD(TAG, "LCD RAM contents: |%s|", lcd_ram);
+        //ESP_LOGD(TAG, "LCD RAM contents: |%s|", lcd_ram);
         update_lcd_physical(lcd_ram);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 
@@ -54,7 +54,7 @@ void update_elapsed_task(void *pvParameters) {
             time(NULL)-last_read_time, 
             lcd_ram+LCD_LINE_4+5);
         lcd_data_stable();
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
 
