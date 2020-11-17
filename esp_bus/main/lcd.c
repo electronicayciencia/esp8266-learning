@@ -92,7 +92,10 @@ void format_distance(int distance, char *out) {
     int km = distance/1000;
     int hm = (distance - 1000*km) / 100;
 
-    if (distance < 1100) {
+    if (distance < 0) {
+        snprintf(buff, 6, "  ??m");
+    }
+    else if (distance >= 0 && distance < 1100) {
         snprintf(buff, 6, "%4dm", distance);
     }
     else if (distance >= 1100 && distance < 10000) {
