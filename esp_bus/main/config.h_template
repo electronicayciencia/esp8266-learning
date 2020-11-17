@@ -5,3 +5,6 @@
 
 #define CONFIG_EMT_OPENAPI_CLIENTID "app clientid"
 #define CONFIG_EMT_OPENAPI_PASSKEY "app passkey"
+
+#define BUS_STOP "70"
+#define BUS_LINE  "1"

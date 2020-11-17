@@ -10,9 +10,6 @@
 #define EMT_CODE_OK  0
 #define EMT_CODE_LOGIN_OK  1
 
-#define BUS_STOP "70"
-#define BUS_LINE  "1"
-
 #define EMT_TOKEN_HEADER "accessToken"
 #define EMT_ARRIVES_URL "https://openapi.emtmadrid.es/v2/transport/busemtmad/stops/"BUS_STOP"/arrives/"BUS_LINE"/"
 #define EMT_ARRIVES_BODY \
