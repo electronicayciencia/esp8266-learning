@@ -23,6 +23,9 @@ Based on https_request example.
 #include "wifi.h"
 #include "http_api.h"
 #include "lcd.h"
+#include "beep.h"
+
+
 
 #define NOBUS_LINE "         -          "
 #define NOBUS_LINE_LEN 20
@@ -58,9 +61,18 @@ void update_elapsed_task(void *pvParameters) {
     }
 }
 
+/* Beep the buzzer */
+void buzzer_task(void *pvParameters) {
+    beep_init();
+
+    while (1) {
+        beep_wait_to_beep();
+        beep_once();
+	}
+}
 
 
-static void update_bus_times_task(void *pvParameters) {
+void update_bus_times_task(void *pvParameters) {
     char token[EMT_TOKEN_LEN];
     bool is_last_token_valid = false;
     bus_t buses[MAX_BUSES];
@@ -129,14 +141,9 @@ static void update_bus_times_task(void *pvParameters) {
             memcpy(lcd_ram+LCD_LINE_3, NOBUS_LINE, NOBUS_LINE_LEN);
         }
 
+        beep();
         lcd_data_stable(); // unlock LCD refresh
 
-        /* Repeat */
-
-        /*for(int countdown = 10; countdown >= 0; countdown--) {
-            ESP_LOGD(TAG, "%d...", countdown);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }*/
         vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
@@ -144,11 +151,10 @@ static void update_bus_times_task(void *pvParameters) {
 
 
 void app_main() {
-
     ESP_ERROR_CHECK( nvs_flash_init() );
     wifi_initialise();
 
-    /* Wait for GPIO startup party */ 
+    // Wait for GPIO startup party 
     vTaskDelay(500 / portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(lcd_initialise(I2C_SCL_IO, I2C_SDA_IO));
@@ -170,9 +176,11 @@ void app_main() {
     lcd_ram[LCD_LEN] = 0;
 
 
-    xTaskCreate(&update_bus_times_task, "update_bus_times_task", 8192, NULL, 5, NULL);
-    xTaskCreate(&update_lcd_physical_task, "update_lcd_physical_task", 2048, NULL, 6, NULL);
-    xTaskCreate(&update_elapsed_task, "update_elapsed_task", 2048, NULL, 6, NULL);
-
+    xTaskCreate(&buzzer_task, "buzzer_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&update_lcd_physical_task, "update_lcd_physical_task", 2048, NULL, 5, NULL);
+    xTaskCreate(&update_bus_times_task, "update_bus_times_task", 8192, NULL, 4, NULL);
+    xTaskCreate(&update_elapsed_task, "update_elapsed_task", 2048, NULL, 4, NULL);
 }
+
+
 
