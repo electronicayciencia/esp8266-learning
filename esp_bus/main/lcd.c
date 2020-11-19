@@ -32,6 +32,7 @@ void lcd_wait_data_stable() {
 esp_err_t lcd_initialise(int scl, int sda) {
     lcd = lcd_create(scl, sda, LCD_I2C_ADDR, LCD_LINES);
     if (lcd == NULL) {
+        ESP_LOGE(TAG, "Cannot setup LCD");
         return ESP_FAIL;
     }
 
