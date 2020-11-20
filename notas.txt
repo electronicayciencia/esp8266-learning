@@ -784,11 +784,16 @@ Moviendo los cables lejos de la antena funciona: eran interferencias.
 
 ¿Se puede usar sólo el pin TX de la UART mientras el pin RX hace de GPIO?
 
-UART:
- - TX:
- - RX: 
+UART0:
+ - TX: GPIO0 
+ - RX: GPIO3
  
+Si funciona como gpio, no hay que hacer nada especial, sólo configurarlo.
+Y cómo PWM también.
+
+Si activo PWM continuo falla el DHCP. Da igual la prioridad de la tarea.
  
+Llamar a beep directamente, no mediante colas. Da igual que bloquee la tarea 100 ms.
 
 
 

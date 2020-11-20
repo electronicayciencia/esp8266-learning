@@ -61,16 +61,6 @@ void update_elapsed_task(void *pvParameters) {
     }
 }
 
-/* Beep the buzzer */
-void buzzer_task(void *pvParameters) {
-    beep_init();
-
-    while (1) {
-        beep_wait_to_beep();
-        beep_once();
-	}
-}
-
 
 void update_bus_times_task(void *pvParameters) {
     char token[EMT_TOKEN_LEN];
@@ -141,8 +131,8 @@ void update_bus_times_task(void *pvParameters) {
             memcpy(lcd_ram+LCD_LINE_3, NOBUS_LINE, NOBUS_LINE_LEN);
         }
 
-        beep();
         lcd_data_stable(); // unlock LCD refresh
+        beep(BEEP_FREQ, BEEP_MS);
 
         vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
@@ -156,6 +146,7 @@ void app_main() {
 
     // Wait for GPIO startup party 
     vTaskDelay(500 / portTICK_PERIOD_MS);
+    beep_init(BEEPER_IO);
 
     ESP_ERROR_CHECK(lcd_initialise(I2C_SCL_IO, I2C_SDA_IO));
     
@@ -176,7 +167,6 @@ void app_main() {
     lcd_ram[LCD_LEN] = 0;
 
 
-    xTaskCreate(&buzzer_task, "buzzer_task", 2048, NULL, 5, NULL);
     xTaskCreate(&update_lcd_physical_task, "update_lcd_physical_task", 2048, NULL, 5, NULL);
     xTaskCreate(&update_bus_times_task, "update_bus_times_task", 8192, NULL, 4, NULL);
     xTaskCreate(&update_elapsed_task, "update_elapsed_task", 2048, NULL, 4, NULL);

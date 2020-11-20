@@ -3,8 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
-#include "esp_event_loop.h"
-#include "freertos/event_groups.h"
+#include "freertos/task.h"
 #include "esp_log.h"
 #include "driver/pwm.h"
 
@@ -12,31 +11,25 @@
 #include "beep.h"
 
 
-#define BEEP_NOW  BIT0
-static EventGroupHandle_t beep_event_group;
 
-/* Non-blocking beep */
-void beep() {
-    xEventGroupSetBits(beep_event_group, BEEP_NOW);
-}
+esp_err_t beep_init(uint32_t pin_num0) {
+    #define DEFAULT_PERIOD 1000
 
-void beep_wait_to_beep() {
-    xEventGroupWaitBits(beep_event_group, BEEP_NOW, true, true, portMAX_DELAY);
-}
-
-void beep_init() {
-    #define PWM_PERIOD  1E6/BEEP_FREQ
-
-    const uint32_t pin_num[] = {BEEPER_IO};
-    uint32_t duties[] = {PWM_PERIOD/2};
+    const uint32_t pin_num[] = {pin_num0};
+    uint32_t duties[] = {DEFAULT_PERIOD/2};
     int16_t phases[] = {0};
 
-	pwm_init(PWM_PERIOD, duties, 1, pin_num);
-    pwm_set_phases(phases);
+	esp_err_t ret = pwm_init(DEFAULT_PERIOD, duties, 1, pin_num);
+    if (ret == ESP_OK) {
+        pwm_set_phases(phases);
+    }
+    return ret;
 }
 
-void beep_once() {
+void beep(int freqhz, int lenms) {
+    uint32_t duties[] = {5E5/freqhz};
+    pwm_set_period_duties(1E6/freqhz, duties);
     pwm_start();
-    vTaskDelay(BEEP_MS / portTICK_RATE_MS);
+    vTaskDelay(lenms/portTICK_RATE_MS);
     pwm_stop(0);
 }
