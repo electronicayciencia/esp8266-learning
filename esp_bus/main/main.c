@@ -41,6 +41,20 @@ time_t last_read_time = 0;
 
 /* Copy LCD RAM to physical LCD in a periodic way */
 void update_lcd_physical_task(void *pvParameters) {
+    
+    memset(lcd_ram,' ', LCD_LEN);
+    //                          12345678901234567890
+    //                         |--------------------|
+    memcpy(lcd_ram,            "Bus#    Dist  Tiempo", 20);
+    memcpy(lcd_ram+LCD_LINE_2, NOBUS_LINE, NOBUS_LINE_LEN);   
+    memcpy(lcd_ram+LCD_LINE_3, NOBUS_LINE, NOBUS_LINE_LEN);   
+    memcpy(lcd_ram+LCD_LINE_4, "Hace --s  L--- P----", 20);
+
+    format_busstop(atoi(BUS_STOP), lcd_ram+LCD_LINE_4+16);
+    format_busline(BUS_LINE, lcd_ram+LCD_LINE_4+11);
+
+    lcd_data_stable();
+
     while(true) {
         lcd_wait_data_stable();
         //ESP_LOGD(TAG, "LCD RAM contents: |%s|", lcd_ram);
@@ -57,7 +71,7 @@ void update_elapsed_task(void *pvParameters) {
             time(NULL)-last_read_time, 
             lcd_ram+LCD_LINE_4+5);
         lcd_data_stable();
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(200 / portTICK_PERIOD_MS);
     }
 }
 
@@ -144,28 +158,10 @@ void app_main() {
     ESP_ERROR_CHECK( nvs_flash_init() );
     wifi_initialise();
 
-    // Wait for GPIO startup party 
-    vTaskDelay(500 / portTICK_PERIOD_MS);
-    beep_init(BEEPER_IO);
+    vTaskDelay(500 / portTICK_PERIOD_MS); // Wait for the GPIO startup party
 
+    ESP_ERROR_CHECK(beep_init(BEEPER_IO));
     ESP_ERROR_CHECK(lcd_initialise(I2C_SCL_IO, I2C_SDA_IO));
-    
-    lcd_data_unstable();
-    memset(lcd_ram,' ', LCD_LEN);
-    //                          12345678901234567890
-    //                         |--------------------|
-    memcpy(lcd_ram,            "Bus#    Dist  Tiempo", 20);
-    memcpy(lcd_ram+LCD_LINE_2, NOBUS_LINE, NOBUS_LINE_LEN);   
-    memcpy(lcd_ram+LCD_LINE_3, NOBUS_LINE, NOBUS_LINE_LEN);   
-    memcpy(lcd_ram+LCD_LINE_4, "Hace --s  L--- P----", 20);
-
-    format_busstop(atoi(BUS_STOP), lcd_ram+LCD_LINE_4+16);
-    format_busline(BUS_LINE, lcd_ram+LCD_LINE_4+11);
-
-    lcd_data_stable();
-
-    lcd_ram[LCD_LEN] = 0;
-
 
     xTaskCreate(&update_lcd_physical_task, "update_lcd_physical_task", 2048, NULL, 5, NULL);
     xTaskCreate(&update_bus_times_task, "update_bus_times_task", 8192, NULL, 4, NULL);

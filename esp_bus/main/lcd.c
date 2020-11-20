@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
-#include "esp_event_loop.h"
 #include "freertos/event_groups.h"
 #include "esp_log.h"
 
