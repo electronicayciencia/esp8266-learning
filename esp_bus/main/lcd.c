@@ -16,15 +16,18 @@ static EventGroupHandle_t lcd_event_group;
 static lcd_t *lcd;
 
 
+/* Changing LCD memory right now */
 void lcd_data_unstable() {
     xEventGroupClearBits(lcd_event_group, LCD_DATA_READY);
 }
 
-void lcd_data_stable() {
+/* LCD memory ready */
+void lcd_new_data() {
     xEventGroupSetBits(lcd_event_group, LCD_DATA_READY);
 }
 
-void lcd_wait_data_stable() {
+/* Wait for new data and also clear the bit */
+void lcd_wait_new_data() {
     xEventGroupWaitBits(lcd_event_group, LCD_DATA_READY, true, true, portMAX_DELAY);
 }
 

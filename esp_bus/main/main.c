@@ -53,25 +53,22 @@ void update_lcd_physical_task(void *pvParameters) {
     format_busstop(atoi(BUS_STOP), lcd_ram+LCD_LINE_4+16);
     format_busline(BUS_LINE, lcd_ram+LCD_LINE_4+11);
 
-    lcd_data_stable();
+    lcd_new_data();
 
     while(true) {
-        lcd_wait_data_stable();
-        //ESP_LOGD(TAG, "LCD RAM contents: |%s|", lcd_ram);
+        lcd_wait_new_data();
         update_lcd_physical(lcd_ram);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 
 /* Update the age of the shown data in seconds */
 void update_elapsed_task(void *pvParameters) {
     while(true) {
-        lcd_data_unstable();
         format_elapsed(
             time(NULL)-last_read_time, 
             lcd_ram+LCD_LINE_4+5);
-        lcd_data_stable();
-        vTaskDelay(200 / portTICK_PERIOD_MS);
+        lcd_new_data();
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 
@@ -123,10 +120,7 @@ void update_bus_times_task(void *pvParameters) {
         }
 
     
-        /* Update LCD for times */
-
-        lcd_data_unstable(); // lock LCD refresh
-
+        /* Update LCD zones for times and distances */
         if (n > 0) {
             format_busnumber(buses[0].number, lcd_ram+LCD_LINE_2);
             format_distance(buses[0].distance, lcd_ram+LCD_LINE_2+7);
@@ -145,10 +139,10 @@ void update_bus_times_task(void *pvParameters) {
             memcpy(lcd_ram+LCD_LINE_3, NOBUS_LINE, NOBUS_LINE_LEN);
         }
 
-        lcd_data_stable(); // unlock LCD refresh
+        lcd_new_data();
         beep(BEEP_FREQ, BEEP_MS);
 
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 

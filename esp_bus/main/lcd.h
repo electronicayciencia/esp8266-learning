@@ -6,9 +6,9 @@
 #define LCD_LEN 20*LCD_LINES
 #define LCD_I2C_ADDR 0x27
 
-void lcd_wait_data_stable(void);
+void lcd_wait_new_data(void);
 void lcd_data_unstable(void);
-void lcd_data_stable(void);
+void lcd_new_data(void);
 esp_err_t lcd_initialise(int scl, int sda);
 void update_lcd_physical(char *ram); 
 void update_lcd_text();
