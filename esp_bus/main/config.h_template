@@ -1,5 +1,6 @@
 /* Application configuration. May include sensible data. */
 
+/* User configuration */
 #define CONFIG_WIFI_SSID   "myssid"
 #define CONFIG_WIFI_PASS   "mypassword"
 
@@ -8,3 +9,12 @@
 
 #define BUS_STOP "70"
 #define BUS_LINE  "1"
+
+#define alert_1_meters 200
+#define alert_2_meters 1500
+
+
+/* Hardware configuration */
+#define I2C_SCL_IO 2  
+#define I2C_SDA_IO 0
+#define BEEPER_IO  3

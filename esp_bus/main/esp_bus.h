@@ -22,7 +22,3 @@
   "}"
 
 #define MAX_BUSES 2
-
-#define I2C_SCL_IO 2  
-#define I2C_SDA_IO 0
-#define BEEPER_IO  3
