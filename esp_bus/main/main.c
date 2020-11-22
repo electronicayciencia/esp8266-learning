@@ -38,7 +38,6 @@ char lcd_ram[LCD_LEN+1];
 time_t last_read_time = 0;
 
 
-
 /* Copy LCD RAM to physical LCD in a periodic way */
 void update_lcd_physical_task(void *pvParameters) {
     
@@ -140,7 +139,8 @@ void update_bus_times_task(void *pvParameters) {
         }
 
         lcd_new_data();
-        beep(BEEP_FREQ, BEEP_MS);
+
+
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -161,6 +161,3 @@ void app_main() {
     xTaskCreate(&update_bus_times_task, "update_bus_times_task", 8192, NULL, 4, NULL);
     xTaskCreate(&update_elapsed_task, "update_elapsed_task", 2048, NULL, 4, NULL);
 }
-
-
-
