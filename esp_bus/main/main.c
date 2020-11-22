@@ -77,6 +77,8 @@ void update_bus_times_task(void *pvParameters) {
     bool is_last_token_valid = false;
     bus_t buses[MAX_BUSES];
 
+    int last_bus0_distance = 0; // keep track to fire alerts
+
     while(true) {
         ESP_LOGI(TAG, "Retrieving EMT data.");
         
@@ -140,7 +142,26 @@ void update_bus_times_task(void *pvParameters) {
 
         lcd_new_data();
 
+        
+        /* Alert when the bus is near */
 
+        if (
+            last_bus0_distance > alert_1_meters && 
+            buses[0].distance < alert_1_meters) {
+
+                ESP_LOGD(TAG, "Fired alert 1.");
+                alert(1);
+        }
+
+        else if (
+            last_bus0_distance > alert_2_meters && 
+            buses[0].distance < alert_2_meters) {
+
+                ESP_LOGD(TAG, "Fired alert 2.");
+                alert(2);
+        }
+
+        last_bus0_distance = buses[0].distance;
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -149,7 +170,9 @@ void update_bus_times_task(void *pvParameters) {
 
 
 void app_main() {
-    ESP_ERROR_CHECK( nvs_flash_init() );
+    ESP_LOGI(TAG, "Welcome to Electronica y Ciencia's Bus Personal Timer.");
+
+    ESP_ERROR_CHECK(nvs_flash_init());
     wifi_initialise();
 
     vTaskDelay(500 / portTICK_PERIOD_MS); // Wait for the GPIO startup party
