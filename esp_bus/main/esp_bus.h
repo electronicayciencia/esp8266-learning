@@ -23,8 +23,8 @@
 
 #define MAX_BUSES 2
 
-#define I2C_SCL_IO 0        
-#define I2C_SDA_IO 2 
+#define I2C_SCL_IO 2  
+#define I2C_SDA_IO 0
 #define BEEPER_IO  3
 #define BEEP_FREQ  1000
 #define BEEP_MS    100

@@ -785,7 +785,7 @@ Moviendo los cables lejos de la antena funciona: eran interferencias.
 ¿Se puede usar sólo el pin TX de la UART mientras el pin RX hace de GPIO?
 
 UART0:
- - TX: GPIO0 
+ - TX: GPIO1 
  - RX: GPIO3
  
 Si funciona como gpio, no hay que hacer nada especial, sólo configurarlo.
@@ -795,13 +795,28 @@ Si activo PWM continuo falla el DHCP. Da igual la prioridad de la tarea.
  
 Llamar a beep directamente, no mediante colas. Da igual que bloquee la tarea 100 ms.
 
+----------------------------
+
+Para flashear directamente con otro puerto: 
+
+    make flash monitor ESPPORT=COM5
+
+----------------------------
+
+Beeper: 12nF
 
 
+consumo entre 60 y 110ma con wifi y lcd.
 
+complementary feedback pair, also known as a Sziklai pair
 
+relacion 1:3 para el regulador
+para pullup resistencias de las que no sé para que usar
+pines torneados para no maltratar breadboard
 
+dos tipos de alarmas
 
-
+esquema
 
 
 
