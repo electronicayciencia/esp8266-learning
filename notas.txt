@@ -818,8 +818,14 @@ dos tipos de alarmas
 
 esquema
 
+avisador de autobuses pero también podría ser avisador de valor de acciones o cualquier otra cosa que se publique en internet y varíe en tiempo real.
 
 
+entorno de desarrollo:
+  toolkit: compilador, link editor, debugger, etc.
+  sdk: librería de c estandar, funciones core hardware (ejemplo 802.1), drivers de periféricos, bootloader, etc.
+
+no problema en I2C +5V porque pullup sólo el master, no los esclavos.
 
 
 
