@@ -808,25 +808,59 @@ Beeper: 12nF
 
 consumo entre 60 y 110ma con wifi y lcd.
 
-complementary feedback pair, also known as a Sziklai pair
+dos tipos de alarmas
+----------------------------
 
-relacion 1:3 para el regulador
-para pullup resistencias de las que no sé para que usar
+
 pines torneados para no maltratar breadboard
 
-dos tipos de alarmas
 
-esquema
+
 
 avisador de autobuses pero también podría ser avisador de valor de acciones o cualquier otra cosa que se publique en internet y varíe en tiempo real.
 
+presentación esp8266
+ - basado en Xtensa (microcontrolador extensible)
+ - bootloader en rom (no se puede modificar o no dicen cómo)
+ - segunda etapa en flash (lanza programa, u ota si es preciso)
+ - flash contiene:
+  - nv storage
+  - programa
+  - 
 
-entorno de desarrollo:
-  toolkit: compilador, link editor, debugger, etc.
-  sdk: librería de c estandar, funciones core hardware (ejemplo 802.1), drivers de periféricos, bootloader, etc.
 
-no problema en I2C +5V porque pullup sólo el master, no los esclavos.
+esquema
+ - complementary feedback pair, also known as a Sziklai pair
+ - relacion 1:3 para el regulador
+ - para pullup resistencias de las que no sé para que usar
+ - no problema en I2C +5V porque pullup sólo el master, no los esclavos.
 
+montar entorno de desarrollo:
+ - toolkit: compilador, link editor, debugger, etc.
+ - sdk: librería de c estandar, funciones core hardware (ejemplo 802.1), drivers de periféricos, bootloader, etc.
+ - sdk versiones: nonOS (deprecated, en esta se basa arduino), RTOS antigua (pre-1.6) y esp-idf. Dentro de esp-idf, version 3.3 estable y última versión.
+ - herramienta para flash, incluido en sdk
+
+ - platformIO no permite menuconfig.
+
+
+descripción del programa:
+ cosas que saber:
+  - programar el chip y uso básico de gpio (ejemplo blinky)
+  - uart, para depuración (ESP_LOG, ejemplo en SDK)
+  - conexión a la wifi (ejemplo en sdk)
+  - cliente http, cliente https (ejemplo en SDK)
+  - cJSON para manejo de la respuesta (no ejemplo, pero lib incluida en SDK).
+  - i2c para control de LCD (ejemplo I2C, mi propia librería LCD con expansor de puertos)
+  - rtos combinar tareas (ejemplo en SDK)
+   
+ tareas principales (múltiples formas, esta es una)
+  - refresco lcd
+  - mantenimiento del tiempo transcurrido
+  - contacto con api, mantenimiento de los autobuses próximos y alertado.
+   
+ bugs:
+  - algunos bugs al flash o al compilar, pero pueden deberse a versión antigua.
 
 
 
