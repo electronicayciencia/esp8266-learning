@@ -1,4 +1,4 @@
-31/01/2020
+31/10/2020
 
 ESP-01, ESP2866.
 
@@ -11,6 +11,8 @@ https://sub.nanona.fi/esp8266/index.html
 https://github.com/espressif/ESP8266_NONOS_SDK
 
 https://hackaday.com/2015/03/18/how-to-directly-program-an-inexpensive-esp8266-wifi-module/
+
+https://richard.burtons.org/2015/05/17/decompiling-the-esp8266-boot-loader-v1-3b3/
 
 Esp-idf is the sdk
 Msys2 is the environment
@@ -821,12 +823,17 @@ avisador de autobuses pero también podría ser avisador de valor de acciones o 
 
 presentación esp8266
  - basado en Xtensa (microcontrolador extensible)
- - bootloader en rom (no se puede modificar o no dicen cómo)
+ - no tiene flash. Se vende en modulos con flash + cuarzo + chip + componenetes RF (+ led)  **conseguir esquema**
+ - esp01 para modem at com wifi
+ - deja enviar y recibir paquetes wifi arbitrarios
+ 
+ - bootloader en rom (no se puede modificar o no dicen cómo, lee los pines gpio15, 0 y 2 escoge el modo de arranque, se comunica mediante slip, permite leer/escribir flash, cargar código etc.)
  - segunda etapa en flash (lanza programa, u ota si es preciso)
  - flash contiene:
   - nv storage
+  - bootloader
   - programa
-  - 
+  - otras cosas
 
 
 esquema
@@ -841,7 +848,8 @@ montar entorno de desarrollo:
  - sdk versiones: nonOS (deprecated, en esta se basa arduino), RTOS antigua (pre-1.6) y esp-idf. Dentro de esp-idf, version 3.3 estable y última versión.
  - herramienta para flash, incluido en sdk
 
- - platformIO no permite menuconfig.
+ - platformIO entorno alternativo, versión sdk antigua, no permite menuconfig.
+ - esp-idf usa eclipse. config con vscode en windows al menos los includes.
 
 
 descripción del programa:
