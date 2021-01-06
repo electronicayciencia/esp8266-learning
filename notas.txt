@@ -872,13 +872,75 @@ descripción del programa:
 
 
 
+"includePath": [
+    "${workspaceFolder}/**",
+    "D:/Programas/ESP/msys32/opt/xtensa-lx106-elf/xtensa-lx106-elf/include",
+    "D:/Programas/ESP/msys32/opt/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/5.2.0/include",
+    "D:/Programas/ESP/msys32/opt/ESP8266_RTOS_SDK/components/**"
+],
+"defines": [
+    "_DEBUG",
+    "ICACHE_FLASH",
+    "__ESP_FILE__='\"main.c\"'",
+    "_CLOCKS_PER_SEC_=CONFIG_FREERTOS_HZ",
+    "_POSIX_THREADS=1",
+    "_UNIX98_THREAD_MUTEX_ATTRIBUTES=1",
+    "APP_OFFSET=0x10000",
+    "APP_SIZE=0xf0000",
+    "ESP_PLATFORM",
+    "IDF_VER=\\\"v3.3-dirty\\\"",
+    "_GNU_SOURCE",
+    "GCC_NOT_5_2_0=0",
+    "WITH_POSIX",
+    "MBEDTLS_CONFIG_FILE='\"mbedtls/esp_config.h\"'",
+    "CONFIG_SSL_USING_MBEDTLS",
+    "_CLOCKS_PER_SEC_=CONFIG_FREERTOS_HZ",
+    "_POSIX_THREADS=1",
+    "_UNIX98_THREAD_MUTEX_ATTRIBUTES=1ICACHE_FLASH",
+    "__ESP_FILE__='\"main.c\"'",
+    "_CLOCKS_PER_SEC_=CONFIG_FREERTOS_HZ",
+    "_POSIX_THREADS=1",
+    "_UNIX98_THREAD_MUTEX_ATTRIBUTES=1",
+    "APP_OFFSET=0x10000",
+    "APP_SIZE=0xf0000",
+    "ESP_PLATFORM",
+    "IDF_VER=\\\"v3.3-dirty\\\"",
+    "_GNU_SOURCE",
+    "GCC_NOT_5_2_0=0",
+    "WITH_POSIX",
+    "MBEDTLS_CONFIG_FILE='\"mbedtls/esp_config.h\"'",
+    "CONFIG_SSL_USING_MBEDTLS",
+    "_CLOCKS_PER_SEC_=CONFIG_FREERTOS_HZ",
+    "_POSIX_THREADS=1",
+    "_UNIX98_THREAD_MUTEX_ATTRIBUTES=1"
+],
 
 
 
 
-
-
-
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "D:/Programas/ESP/msys32/opt/xtensa-lx106-elf/xtensa-lx106-elf/include",
+                "D:/Programas/ESP/msys32/opt/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/5.2.0/include",
+                "D:/Programas/ESP/msys32/opt/ESP8266_RTOS_SDK/components/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "__ESP_FILE__=\"main.c\""
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "msvc-x64"
+        }
+    ],
+    "version": 4
+}
 
 
 
