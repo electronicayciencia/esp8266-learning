@@ -177,8 +177,8 @@ void app_main() {
 
     vTaskDelay(500 / portTICK_PERIOD_MS); // Wait for the GPIO startup party
 
+    ESP_ERROR_CHECK(lcd_initialise(I2C_SCL_IO, I2C_SDA_IO)); // if it fails, it may be connected to the programmer
     ESP_ERROR_CHECK(beep_init(BEEPER_IO));
-    ESP_ERROR_CHECK(lcd_initialise(I2C_SCL_IO, I2C_SDA_IO));
 
     xTaskCreate(&update_lcd_physical_task, "update_lcd_physical_task", 2048, NULL, 5, NULL);
     xTaskCreate(&update_bus_times_task, "update_bus_times_task", 8192, NULL, 4, NULL);
