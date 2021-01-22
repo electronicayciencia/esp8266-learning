@@ -1,4 +1,4 @@
-/* DS1820 testing
+/* Poor-man's Logic Analyzer
 */
 
 #include <stdio.h>
