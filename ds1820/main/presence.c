@@ -27,7 +27,8 @@
 #define TRSTL_MIN 480
 #define TPDHIGH_MAX 60
 
-void app_main(void)
+//void app_main(void)
+void presence(void)  // rename to app_main
 {
     esp_log_level_set(TAG, ESP_LOG_DEBUG);
 
