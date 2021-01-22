@@ -1,6 +1,4 @@
-/* gpio interrupt frequency counter
-   Input is GPIO2.
-   Performance is good until about 90kHz.
+/* DS1820 testing
 */
 
 #include <stdio.h>
