@@ -17,6 +17,10 @@
 
 #define TAG        "main"
 #define PIN_PMLA   GPIO_NUM_2
+#define PIN_1WIRE  GPIO_NUM_0
+
+#define LOW  0
+#define HIGH 1
 
 /* 
 PIN_PMLA generates interrupt on level change.
@@ -60,22 +64,27 @@ static void pmla_task(void *arg) {
 
 void app_main(void)
 {
+    /* Config PMLA pin */
     gpio_set_intr_type(PIN_PMLA, GPIO_INTR_ANYEDGE);
     gpio_set_direction(PIN_PMLA, GPIO_MODE_INPUT);
     gpio_pullup_en(PIN_PMLA);
 
+    /* Install PMLA routine */
     pmla_queue = xQueueCreate(10, sizeof(pmla_data_t));
-    //start pmla_task to wait for queue events
     xTaskCreate(pmla_task, "pmla_task", 2048, NULL, 10, NULL);
-
-    //install isr service
     gpio_install_isr_service(0);
     gpio_isr_handler_add(PIN_PMLA, pmla_isr, NULL);
 
+    /* Config 1WIRE pin */
+    gpio_set_direction(PIN_1WIRE, GPIO_MODE_OUTPUT_OD);
+    gpio_pullup_en(PIN_1WIRE);
+
     while (1) {
-        //ESP_LOGI(TAG, "Running...");
-        vTaskDelay(10000 / portTICK_RATE_MS);
+        gpio_set_level(PIN_1WIRE, LOW);
+        ets_delay_us(500);
+        gpio_set_level(PIN_1WIRE, HIGH);
+        // wait for presence
+        vTaskDelay(5000 / portTICK_RATE_MS);
+
     }
 }
-
-
