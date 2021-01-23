@@ -118,7 +118,12 @@ int ds1820_reset (gpio_num_t pin) {
     v = gpio_get_level(pin);   /* DS1820 pulls down if present */
     EXIT_CRITICAL();
     ets_delay_us(TRSTH-TPDHIGH+TREC);
-    return !v;
+    
+    if (v == HIGH) {
+        return DS1820_ERR_NODEVICE;
+    }
+
+    return DS1820_ERR_OK;
 }
 
 /* Calculates CRC8-Maxim according datasheet
@@ -152,8 +157,8 @@ unsigned char crc8 (char *str, size_t len) {
     return crc;
 }
 
-/* Reads ROM, void function just for testing */
-void ds1820_read_rom(gpio_num_t pin) {
+/* Reads ROM, just for testing */
+int ds1820_read_rom(gpio_num_t pin) {
     ESP_LOGI(TAG, "Reading ROM data (Cmd 33h)");
     send_byte(pin, CMD_READ_ROM);
     char rom_data[8];
@@ -174,22 +179,28 @@ void ds1820_read_rom(gpio_num_t pin) {
         rom_data[7],
         crc8(rom_data, 8) ? "error" : "OK");
 
-    ds1820_reset(pin);
+    if (ds1820_reset(pin) != DS1820_ERR_OK) {
+        return DS1820_ERR_NODEVICE;
+    }
+
+    return DS1820_ERR_OK;
 }
 
 /* Starts a temperature convertion and waits for it to be done */
 void convert_t (gpio_num_t pin) {
-    send_byte(pin, CMD_SKIP_ROM);
     send_byte(pin, CMD_CONVERT_T);
 
     while (read_byte(pin) != 0xFF)
         vTaskDelay(20 / portTICK_RATE_MS);  // up to 500ms
-
-    ds1820_reset(pin);
 }
 
 /* Return DS1820_ERR_OK if OK and DS1820_ERR_BADCRC if error */
 int read_scratchpad(gpio_num_t pin, char *buff) {
+
+    if (ds1820_reset(pin) != DS1820_ERR_OK) {
+        return DS1820_ERR_NODEVICE;
+    }
+
     send_byte(pin, CMD_SKIP_ROM);
     send_byte(pin, CMD_READ_SP);
     int i;
@@ -211,7 +222,9 @@ int read_scratchpad(gpio_num_t pin, char *buff) {
         buff[8],
         crc_remainder ? "error" : "OK");
 
-    ds1820_reset(pin);
+    if (ds1820_reset(pin) != DS1820_ERR_OK) {
+        return DS1820_ERR_NODEVICE;
+    }
 
     if (crc_remainder) {
         return DS1820_ERR_BADCRC;
@@ -224,12 +237,19 @@ int read_scratchpad(gpio_num_t pin, char *buff) {
 /* Not tested with negative temperature */
 /* Return DS1820_ERR_OK if OK and DS1820_ERR_BADCRC if error */
 int ds1820_read_temp(gpio_num_t pin, float *temp) {
+    if (ds1820_reset(pin) != DS1820_ERR_OK) {
+        return DS1820_ERR_NODEVICE;
+    }
+
+    send_byte(pin, CMD_SKIP_ROM);
     convert_t(pin);
+
+    if (ds1820_reset(pin) != DS1820_ERR_OK) {
+        return DS1820_ERR_NODEVICE;
+    }
 
     char scratchpad[9];
     int result = read_scratchpad(pin, scratchpad);
-
-
 
     int8_t  temp_read    = scratchpad[0];
     uint8_t count_remain = scratchpad[6];
@@ -241,6 +261,10 @@ int ds1820_read_temp(gpio_num_t pin, float *temp) {
     float temp_hr = (int) temp_read / 2;
     temp_hr = temp_hr - 0.25 + ((float)count_per_c - (float)count_remain) / (float)count_per_c;
     *temp = temp_hr;
+
+    if (ds1820_reset(pin) != DS1820_ERR_OK) {
+        return DS1820_ERR_NODEVICE;
+    }
 
     if (result == DS1820_ERR_BADCRC) {
         return DS1820_ERR_BADCRC;

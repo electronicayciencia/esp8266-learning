@@ -30,22 +30,24 @@ void app_main(void) {
 
     puts("DS1820 Test Program for ESP-IDF");
  
-    if (ds1820_reset(PIN_1WIRE)) {
-        ESP_LOGI(TAG, "Device present!");
+    if (ds1820_reset(PIN_1WIRE) == DS1820_ERR_OK) {
+        ESP_LOGI(TAG, "Device detected!");
         ds1820_read_rom(PIN_1WIRE);
+    }
 
-        puts("Reading temperature:");
-        while (1) {
-            float temperature;
-            int result = ds1820_read_temp(PIN_1WIRE, &temperature);
+    while (1) {
+        float temperature;
+        int result = ds1820_read_temp(PIN_1WIRE, &temperature);
+        
+        if (result == DS1820_ERR_NODEVICE) {
+            ESP_LOGW(TAG, "Device not present.");
+        }
+        else {
             printf("Temperature is %.2fºC (crc %s)\n", 
                 temperature, 
                 result == DS1820_ERR_OK ? "ok" : "error");
-            vTaskDelay(1000 / portTICK_RATE_MS);
         }
-    }
-    else {
-        ESP_LOGD(TAG, "Device not present, no response :(");
+
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
 }
