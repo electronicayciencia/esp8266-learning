@@ -16,6 +16,8 @@
 #include "esp_system.h"
 #include "esp_timer.h" // high resolution timer
 
+#include "ds1820.h"
+
 #define TAG  "ds1820"
 #define LOW  0
 #define HIGH 1
@@ -40,6 +42,8 @@
 #define CMD_READ_ROM 0x33   /* Read ROM command */
 #define CMD_READ_SP 0xBE    /* Read Scratchpad command */
 #define CMD_CONVERT_T 0x44  /* Convert T command */
+
+
 
 /* Pulls down the bus for given us and then releases it */
 void low(gpio_num_t pin, int us) {
@@ -184,7 +188,8 @@ void convert_t (gpio_num_t pin) {
     ds1820_reset(pin);
 }
 
-void read_scratchpad(gpio_num_t pin, char *buff) {
+/* Return DS1820_ERR_OK if OK and DS1820_ERR_BADCRC if error */
+int read_scratchpad(gpio_num_t pin, char *buff) {
     send_byte(pin, CMD_SKIP_ROM);
     send_byte(pin, CMD_READ_SP);
     int i;
@@ -192,6 +197,8 @@ void read_scratchpad(gpio_num_t pin, char *buff) {
         buff[i] = read_byte(pin);
     }
     
+    int crc_remainder = crc8(buff, 9);
+
     ESP_LOGD(TAG, "Scratchpad: %02X %02X %02X %02X %02X %02X %02X %02X %02X - CRC %s",
         buff[0],
         buff[1],
@@ -202,27 +209,43 @@ void read_scratchpad(gpio_num_t pin, char *buff) {
         buff[6],
         buff[7],
         buff[8],
-        crc8(buff, 9) ? "error" : "OK");
+        crc_remainder ? "error" : "OK");
 
     ds1820_reset(pin);
+
+    if (crc_remainder) {
+        return DS1820_ERR_BADCRC;
+    }
+    else {
+        return DS1820_ERR_OK;
+    }
 }
 
 /* Not tested with negative temperature */
-float ds1820_read_temp(gpio_num_t pin) {
+/* Return DS1820_ERR_OK if OK and DS1820_ERR_BADCRC if error */
+int ds1820_read_temp(gpio_num_t pin, float *temp) {
     convert_t(pin);
 
     char scratchpad[9];
-    read_scratchpad(pin, scratchpad);
+    int result = read_scratchpad(pin, scratchpad);
+
+
 
     int8_t  temp_read    = scratchpad[0];
     uint8_t count_remain = scratchpad[6];
     uint8_t count_per_c  = scratchpad[7];
 
-    /* Low res temp */
-    //return (float) temp_read / 2.0;
-
-    /* High res temp */
+    /* Low res temp (fixed point arithmertic) */
+    //temp = (float) temp_read / 2;
+    /* High res temp (floating point arithmetic) */
     float temp_hr = (int) temp_read / 2;
     temp_hr = temp_hr - 0.25 + ((float)count_per_c - (float)count_remain) / (float)count_per_c;
-    return temp_hr;
+    *temp = temp_hr;
+
+    if (result == DS1820_ERR_BADCRC) {
+        return DS1820_ERR_BADCRC;
+    }
+    else {
+        return DS1820_ERR_OK;
+    }
 }

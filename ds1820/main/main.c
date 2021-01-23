@@ -36,7 +36,11 @@ void app_main(void) {
 
         puts("Reading temperature:");
         while (1) {
-            printf("Temperature is %.2fºC\n", ds1820_read_temp(PIN_1WIRE));
+            float temperature;
+            int result = ds1820_read_temp(PIN_1WIRE, &temperature);
+            printf("Temperature is %.2fºC (crc %s)\n", 
+                temperature, 
+                result == DS1820_ERR_OK ? "ok" : "error");
             vTaskDelay(1000 / portTICK_RATE_MS);
         }
     }

@@ -46,12 +46,16 @@ Output:
     I (360) ds1820: Reading ROM data (Cmd 33h)
     I (374) ds1820: ROM data: 10 C4 54 E3 01 08 00 2E - CRC OK
 
-### float ds1820_read_temp(gpio_num_t pin)
+### int ds1820_read_temp(gpio_num_t pin, float *temp)
 
 Reads the temperature.
 
 ```c
-printf("Temperature is %.2fºC\n", ds1820_read_temp(PIN_1WIRE));
+float temperature;
+int result = ds1820_read_temp(PIN_1WIRE, &temperature);
+printf("Temperature is %.2fºC (crc %s)\n", 
+    temperature, 
+    result == DS1820_ERR_OK ? "ok" : "error");
 ```
 
 Output:
