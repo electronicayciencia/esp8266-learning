@@ -20,9 +20,23 @@
 #define LOW  0
 #define HIGH 1
 
-#define PIN_1WIRE  GPIO_NUM_0 /* pin number */
-#define TIMESLOT 90   /* 1-Wire time slot in us 60-120 */
-#define TREC 2        /* Line pull up recovery time us */
+/* Bus line pull up recovery time (us) */
+#define TREC 2 
+
+/* Device timing parameters (see DS1820 datasheet) */
+#define TRSTL 480   /* Reset Time Low (minimun time) */
+#define TRSTH 480   /* Reset Time High */
+#define TPDHIGH 60  /* Presence Detect High (max time) */
+#define TSLOT 90    /* Time Slot (us) 60-120 */
+#define TLOW1 5     /* Write 1 Low Time */
+#define TLOW0 TSLOT /* Write 0 Low Time (full timeslot) */
+#define TRDV 2      /* Read Data Valid */
+
+/* Device commands (see DS1820 datasheet) */
+#define CMD_SKIP_ROM 0xCC   /* Skip ROM command */
+#define CMD_READ_ROM 0x33   /* Read ROM command */
+#define CMD_READ_SP 0xBE    /* Read Scratchpad command */
+#define CMD_CONVERT_T 0x44  /* Convert T command */
 
 /* Pulls down the bus for given us and then releases it */
 void low(gpio_num_t pin, int us) {
@@ -37,11 +51,11 @@ void low(gpio_num_t pin, int us) {
  * and then releasing it for the rest of time slot */
 void send_bit(gpio_num_t pin, int bit) {
     if (bit == HIGH) {
-        low(pin,2); /* 1-5 us */
-        ets_delay_us(TIMESLOT-5);
+        low(pin, TLOW1);
+        ets_delay_us(TSLOT-TLOW1);
     }
     else {
-        low(pin,TIMESLOT);
+        low(pin, TLOW0);
     }
 }
 
@@ -59,9 +73,9 @@ void send_byte(gpio_num_t pin, char byte) {
 int read_bit(gpio_num_t pin) {
     int s;
 
-    low(pin, 2);  // > 1us
+    low(pin, TRDV);
     s = gpio_get_level(pin);
-    ets_delay_us(TIMESLOT);
+    ets_delay_us(TSLOT);
 
     //printf("%s", s ? "1" : "0");
     return s;
@@ -86,10 +100,10 @@ char read_byte(gpio_num_t pin) {
 /* Sends a reset pulse and waits for a presence response */
 int ds1820_reset (gpio_num_t pin) {
     int v;
-    low(pin, 960);             /* Reset pulse 480-960us */
-    ets_delay_us(60);          /* Wait 15-60 and answer back*/
-    v = gpio_get_level(pin);      /* DS1820 pulls down if present */
-    ets_delay_us(300);         /* Wait  and answer back*/
+    low(pin, TRSTL);           /* Reset pulse */
+    ets_delay_us(TPDHIGH);     /* Wait 15-60 and answer back*/
+    v = gpio_get_level(pin);   /* DS1820 pulls down if present */
+    ets_delay_us(TRSTH-TPDHIGH+TREC);
     return !v;
 }
 
@@ -127,7 +141,7 @@ unsigned char crc8 (char *str, size_t len) {
 /* Reads ROM, void function just for testing */
 void ds1820_read_rom(gpio_num_t pin) {
     ESP_LOGI(TAG, "Reading ROM data (Cmd 33h)");
-    send_byte(pin, 0x33);
+    send_byte(pin, CMD_READ_ROM);
     char rom_data[8];
 
     int i;
@@ -151,8 +165,8 @@ void ds1820_read_rom(gpio_num_t pin) {
 
 /* Starts a temperature convertion and waits for it to be done */
 void convert_t (gpio_num_t pin) {
-    send_byte(pin, 0xCC);
-    send_byte(pin, 0x44);
+    send_byte(pin, CMD_SKIP_ROM);
+    send_byte(pin, CMD_CONVERT_T);
 
     while (read_byte(pin) != 0xFF)
         vTaskDelay(20 / portTICK_RATE_MS);  // up to 500ms
@@ -161,8 +175,8 @@ void convert_t (gpio_num_t pin) {
 }
 
 void read_scratchpad(gpio_num_t pin, char *buff) {
-    send_byte(pin, 0xCC);
-    send_byte(pin, 0xBE);
+    send_byte(pin, CMD_SKIP_ROM);
+    send_byte(pin, CMD_READ_SP);
     int i;
     for (i = 0; i < 9; i++) {
         buff[i] = read_byte(pin);
