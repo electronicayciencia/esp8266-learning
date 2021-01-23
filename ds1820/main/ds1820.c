@@ -20,6 +20,9 @@
 #define LOW  0
 #define HIGH 1
 
+#define ENTER_CRITICAL() portENTER_CRITICAL()
+#define EXIT_CRITICAL() portEXIT_CRITICAL()
+
 /* Bus line pull up recovery time (us) */
 #define TREC 2 
 
@@ -43,13 +46,13 @@ void low(gpio_num_t pin, int us) {
     gpio_set_level(pin, LOW);
     ets_delay_us(us);
     gpio_set_level(pin, HIGH);
-    ets_delay_us(TREC);
 }
 
 /* Sends a 0 by pulling the bus for a whole time slot
  * Sends a 1 by pulling just a bit (10-15ms),
  * and then releasing it for the rest of time slot */
 void send_bit(gpio_num_t pin, int bit) {
+    ENTER_CRITICAL();
     if (bit == HIGH) {
         low(pin, TLOW1);
         ets_delay_us(TSLOT-TLOW1);
@@ -57,6 +60,8 @@ void send_bit(gpio_num_t pin, int bit) {
     else {
         low(pin, TLOW0);
     }
+    ets_delay_us(TREC);
+    EXIT_CRITICAL();
 }
 
 /* Sends 8 bit in a row, LSB first */
@@ -73,9 +78,11 @@ void send_byte(gpio_num_t pin, char byte) {
 int read_bit(gpio_num_t pin) {
     int s;
 
+    ENTER_CRITICAL();
     low(pin, TRDV);
     s = gpio_get_level(pin);
     ets_delay_us(TSLOT);
+    EXIT_CRITICAL();
 
     //printf("%s", s ? "1" : "0");
     return s;
@@ -100,9 +107,12 @@ char read_byte(gpio_num_t pin) {
 /* Sends a reset pulse and waits for a presence response */
 int ds1820_reset (gpio_num_t pin) {
     int v;
+
+    ENTER_CRITICAL();
     low(pin, TRSTL);           /* Reset pulse */
     ets_delay_us(TPDHIGH);     /* Wait 15-60 and answer back*/
     v = gpio_get_level(pin);   /* DS1820 pulls down if present */
+    EXIT_CRITICAL();
     ets_delay_us(TRSTH-TPDHIGH+TREC);
     return !v;
 }
@@ -197,7 +207,7 @@ void read_scratchpad(gpio_num_t pin, char *buff) {
     ds1820_reset(pin);
 }
 
-
+/* Not tested with negative temperature */
 float ds1820_read_temp(gpio_num_t pin) {
     convert_t(pin);
 
