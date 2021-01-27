@@ -1,6 +1,8 @@
 /* 
     Simple library for DS1820 for ESP-IDF
 
+    For devices in the same port this library is not thread-safe.
+
     Electronicayciencia 22/01/2021
 */
 
@@ -37,26 +39,21 @@
 #define TLOW1 5     /* Write 1 Low Time */
 #define TLOW0 TSLOT /* Write 0 Low Time (full timeslot) */
 #define TRDV 2      /* Read Data Valid */
+#define TCONV 94    /* Temperature Conversion Time (for 9 bits) milliseconds */
 
 /* Device commands (see DS1820 datasheet) */
-#define CMD_SKIP_ROM  0xCC  /* Skip ROM command */
-#define CMD_READ_PWR  0xB4  /* Read Power Supply command */
-#define CMD_READ_ROM  0x33  /* Read ROM command */
-#define CMD_READ_SP   0xBE  /* Read Scratchpad command */
-#define CMD_CONVERT_T 0x44  /* Convert T command */
+typedef enum {
+    CMD_SKIP_ROM  = 0xCC,  /* Skip ROM command */
+    CMD_READ_PWR  = 0xB4,  /* Read Power Supply command */
+    CMD_READ_ROM  = 0x33,  /* Read ROM command */
+    CMD_READ_SP   = 0xBE,  /* Read Scratchpad command */
+    CMD_CONVERT_T = 0x44   /* Convert T command */
+} ds1820_cmd_t;
 
-/* Power supply model */
-#define DS1820_PWR_VCC 0
-#define DS1820_PWR_PARASITE 1
-
-/* Family */
-#define DS1820_FAMILY_DS18S20 0x10
-#define DS1820_FAMILY_DS18B20 0x28
-#define DS1820_FAMILY_DS1825  0x3B
 
 
 /* Pulls down the bus for given us and then releases it */
-void low(gpio_num_t pin, int us) {
+static void low(gpio_num_t pin, uint32_t us) {
     gpio_set_level(pin, LOW);
     ets_delay_us(us);
     gpio_set_level(pin, HIGH);
@@ -65,7 +62,7 @@ void low(gpio_num_t pin, int us) {
 /* Sends a 0 by pulling the bus for a whole time slot
  * Sends a 1 by pulling just a bit (10-15ms),
  * and then releasing it for the rest of time slot */
-void send_bit(gpio_num_t pin, int bit) {
+static void send_bit(gpio_num_t pin, bool bit) {
     ENTER_CRITICAL();
     if (bit == HIGH) {
         low(pin, TLOW1);
@@ -79,17 +76,18 @@ void send_bit(gpio_num_t pin, int bit) {
 }
 
 /* Sends 8 bit in a row, LSB first */
-void send_byte(gpio_num_t pin, char byte) {
+/* Only used to send commands right now */
+static void send_cmd(ds1820_device_t *dev, ds1820_cmd_t cmd) {
     int i;
 
     for (i = 0; i < 8; i++) {
-        send_bit(pin, byte & 1);
-        byte = byte >> 1;
+        send_bit(dev->pin, cmd & 1);
+        cmd = cmd >> 1;
     }
 }
 
 /* Sends a brief pulse and then read for the response */
-int read_bit(gpio_num_t pin) {
+static bool read_bit(gpio_num_t pin) {
     int s;
 
     ENTER_CRITICAL();
@@ -103,7 +101,7 @@ int read_bit(gpio_num_t pin) {
 }
 
 /* Reads a byte, LSB first */
-char read_byte(gpio_num_t pin) {
+static char read_byte(gpio_num_t pin) {
     int byte = 0x00;
     int i;
 
@@ -118,14 +116,23 @@ char read_byte(gpio_num_t pin) {
     return byte;
 }
 
-/* Sends a reset pulse and waits for a presence response */
-ds1820_err_t ds1820_reset (ds1820_device_t *dev) {
-    int v;
+static void strong_pullup(ds1820_device_t *dev, uint32_t ms) {
+    gpio_set_direction(dev->pin, GPIO_MODE_OUTPUT);
+    gpio_set_level(dev->pin, HIGH);
 
+    ESP_LOGD(TAG, "Strong pullup for %d ms", ms);
+
+    vTaskDelay(ms / portTICK_RATE_MS);
+    
+    gpio_set_direction(dev->pin, GPIO_MODE_OUTPUT_OD);
+}
+
+/* Sends a reset pulse and waits for a presence response */
+static ds1820_err_t reset (ds1820_device_t *dev) {
     ENTER_CRITICAL();
     low(dev->pin, TRSTL);           /* Reset pulse */
     ets_delay_us(TPDHIGH);     /* Wait 15-60 and answer back*/
-    v = gpio_get_level(dev->pin);   /* DS1820 pulls down if present */
+    int v = gpio_get_level(dev->pin);   /* DS1820 pulls down if present */
     EXIT_CRITICAL();
     ets_delay_us(TRSTH-TPDHIGH+TREC);
     
@@ -138,7 +145,7 @@ ds1820_err_t ds1820_reset (ds1820_device_t *dev) {
 
 /* Calculates CRC8-Maxim according datasheet
  * If CRC is appended at the end of string, correct array gives result 00 */
-unsigned char crc8 (char *str, size_t len) {
+static unsigned char crc8 (char *str, size_t len) {
     char div = 0b10001100; // Rotated poly
     unsigned char crc = 0;
 
@@ -169,9 +176,9 @@ unsigned char crc8 (char *str, size_t len) {
 
 /* Reads device ROM and fills ROM field.
    Only usable when there is just one device in the bus. */
-ds1820_err_t ds1820_read_rom(ds1820_device_t *dev) {
+static ds1820_err_t read_rom(ds1820_device_t *dev) {
     ESP_LOGI(TAG, "Reading ROM data (Cmd 33h)");
-    send_byte(dev->pin, CMD_READ_ROM);
+    send_cmd(dev, CMD_READ_ROM);
 
     int i;
     for (i = 0; i < 8; i++) {
@@ -189,19 +196,33 @@ ds1820_err_t ds1820_read_rom(ds1820_device_t *dev) {
         dev->rom[7],
         crc8(dev->rom, 8) ? "error" : "OK");
 
-    if (ds1820_reset(dev->pin) != DS1820_ERR_OK) {
+    if (reset(dev) != DS1820_ERR_OK) {
         return DS1820_ERR_NODEVICE;
     }
 
     return DS1820_ERR_OK;
 }
 
-/* Starts a temperature convertion and waits for it to be done */
-ds1820_err_t convert_t (ds1820_device_t *dev) {
-    send_byte(dev->pin, CMD_CONVERT_T);
+/* Read power mode used by the devices. */
+static ds1820_pwr_t read_power_mode(ds1820_device_t *dev) {
+    send_cmd(dev, CMD_SKIP_ROM);
+    send_cmd(dev, CMD_READ_PWR);
 
-    while (read_byte(dev->pin) != 0xFF)
-        vTaskDelay(20 / portTICK_RATE_MS);  // up to 500ms
+    return read_bit(dev->pin) == LOW ? DS1820_PWR_PARASITE
+                                     : DS1820_PWR_VCC;
+}
+
+/* Starts a temperature conversion and waits for it to be done */
+static ds1820_err_t convert_t (ds1820_device_t *dev) {
+    send_cmd(dev, CMD_CONVERT_T);
+
+    if (dev->power == DS1820_PWR_PARASITE) {
+        strong_pullup(dev, TCONV << (dev->resolution_bits - 9));
+    }
+    else {
+        while (read_byte(dev->pin) != 0xFF)
+            vTaskDelay(20 / portTICK_RATE_MS);  // ask every 20 ms
+    }
     
     return DS1820_ERR_OK;
 }
@@ -209,12 +230,12 @@ ds1820_err_t convert_t (ds1820_device_t *dev) {
 /* Return DS1820_ERR_OK if OK and DS1820_ERR_BADCRC if error */
 ds1820_err_t read_scratchpad(ds1820_device_t *dev) {
 
-    if (ds1820_reset(dev->pin) != DS1820_ERR_OK) {
+    if (reset(dev) != DS1820_ERR_OK) {
         return DS1820_ERR_NODEVICE;
     }
 
-    send_byte(dev->pin, CMD_SKIP_ROM);
-    send_byte(dev->pin, CMD_READ_SP);
+    send_cmd(dev, CMD_SKIP_ROM);
+    send_cmd(dev, CMD_READ_SP);
     int i;
     for (i = 0; i < 9; i++) {
         dev->scratchpad[i] = read_byte(dev->pin);
@@ -232,9 +253,9 @@ ds1820_err_t read_scratchpad(ds1820_device_t *dev) {
         dev->scratchpad[6],
         dev->scratchpad[7],
         dev->scratchpad[8],
-        crc_remainder ? "error" : "OK");
+        crc_remainder == 0 ? "OK" : "error");
 
-    if (ds1820_reset(dev) != DS1820_ERR_OK) {
+    if (reset(dev) != DS1820_ERR_OK) {
         return DS1820_ERR_NODEVICE;
     }
 
@@ -249,34 +270,38 @@ ds1820_err_t read_scratchpad(ds1820_device_t *dev) {
 /* Not tested with negative temperature */
 /* Return DS1820_ERR_OK if OK and DS1820_ERR_BADCRC if error */
 ds1820_err_t ds1820_read_temp(ds1820_device_t *dev, float *temp) {
-    if (ds1820_reset(dev->pin) != DS1820_ERR_OK) {
+    if (reset(dev) != DS1820_ERR_OK) {
         return DS1820_ERR_NODEVICE;
     }
 
-    send_byte(dev, CMD_SKIP_ROM);
+    send_cmd(dev, CMD_SKIP_ROM);
     convert_t(dev);
 
-    if (ds1820_reset(dev) != DS1820_ERR_OK) {
+    if (reset(dev) != DS1820_ERR_OK) {
         return DS1820_ERR_NODEVICE;
     }
 
-    char scratchpad[9];
+    /* TODO: check for CRC, repeat if bad */
     int result = read_scratchpad(dev);
 
-    int8_t  temp_read    = dev->scratchpad[0];
-    uint8_t count_remain = dev->scratchpad[6];
-    uint8_t count_per_c  = dev->scratchpad[7];
-
-    /* Low res temp (fixed point arithmertic) */
+    /* DS1820 Low res temp (fixed point arithmertic) */
     //temp = (float) temp_read / 2;
-    /* High res temp (floating point arithmetic) */
-    float temp_hr = (int) temp_read / 2;
-    temp_hr = temp_hr - 0.25 + ((float)count_per_c - (float)count_remain) / (float)count_per_c;
-    *temp = temp_hr;
-    // For 18b20
-    // *temp = ((scratchpad[1] << 8) + scratchpad[0]) / 16.0;
+    /* DS1820 High res temp (floating point arithmetic) */
+    if (dev->family == DS1820_FAMILY_DS18S20) {
+        int8_t  temp_read    = dev->scratchpad[0];
+        uint8_t count_remain = dev->scratchpad[6];
+        uint8_t count_per_c  = dev->scratchpad[7];
 
-    if (ds1820_reset(dev) != DS1820_ERR_OK) {
+        float temp_hr = (int) temp_read / 2;
+        temp_hr = temp_hr - 0.25 + ((float)count_per_c - (float)count_remain) / (float)count_per_c;
+        *temp = temp_hr;
+    }
+    /* DS18B20 12 bit resolution */
+    else {
+        *temp = ((dev->scratchpad[1] << 8) + dev->scratchpad[0]) / 16.0;
+    }
+
+    if (reset(dev) != DS1820_ERR_OK) {
         return DS1820_ERR_NODEVICE;
     }
 
@@ -292,34 +317,37 @@ ds1820_err_t ds1820_read_temp(ds1820_device_t *dev, float *temp) {
 /* Initialization. Read power supply and reset */
 /* Return null on error */
 ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
+
     ds1820_device_t *dev = malloc(sizeof(ds1820_device_t));
 
     if (dev == NULL) {
         ESP_LOGE(TAG, "Cannot allocate memory.");
         return NULL;
     }
+    
     dev->pin = pin;
-    dev->model = model;
-
+    dev->resolution_bits = 12; // only default supported
 
     /* configure pin open drain (weak pullup) */
     gpio_set_direction(dev->pin, GPIO_MODE_OUTPUT_OD);
     gpio_pullup_en(dev->pin);
 
     /* Check if any device exists */
-    if (ds1820_reset(dev) != DS1820_ERR_OK) {
+    if (reset(dev) != DS1820_ERR_OK) {
         ESP_LOGE(TAG, "No devices in 1-wire bus.");
         return NULL;
     }
 
+    ESP_LOGI(TAG, "At least 1 device detected!");
+
     /* Learn rom */
-    if (rom) {
+    if (rom != NULL) {
         ESP_LOGW(TAG, "Multiple devices in same bus not supported yet.");
         memcpy(dev->rom, rom, 8);
         /* TODO: Check if that device actually answer */
     }
     else {
-        if (ds1820_read_rom(dev) != DS1820_ERR_OK) {
+        if (read_rom(dev) != DS1820_ERR_OK) {
             ESP_LOGE(TAG, "Error reading ROM. Multiple devices?");
             return NULL;
         }
@@ -329,17 +357,13 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
     switch (dev->rom[0]) {
         case DS1820_FAMILY_DS18S20:
             dev->family = DS1820_FAMILY_DS18S20;
-            ESP_LOGI(TAG, "Device is a DS1820 or DS18S20.");
+            ESP_LOGI(TAG, "Device family is DS1820 or DS18S20.");
             break;
 
         case DS1820_FAMILY_DS18B20:
             dev->family = DS1820_FAMILY_DS18B20;
-            ESP_LOGI(TAG, "Device is a DS18B20.");
+            ESP_LOGI(TAG, "Device family is DS18B20.");
             break;
-
-        case DS1820_FAMILY_DS1825:
-            ESP_LOGE(TAG, "Device DS1825 is not supported yet.");
-            return NULL;
 
         default:
             ESP_LOGE(TAG, "Unkown device family: %02X.", dev->rom[0]);
@@ -347,7 +371,13 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
     }
 
     /* Learn power mode */
+    if (read_power_mode(dev) == DS1820_PWR_PARASITE) {
+        ESP_LOGI(TAG, "One o more devices are using parasitic power. "
+                      "Strong pull up active.");
+        dev->power = DS1820_PWR_PARASITE;
+    }
 
+    return dev;
 }
 
-/* todo: free */
+/* TODO: free */

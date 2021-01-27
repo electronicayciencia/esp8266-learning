@@ -21,18 +21,29 @@
 
 typedef int ds1820_err_t;
 
+/* Power supply model */
+typedef enum { 
+    DS1820_PWR_VCC, 
+    DS1820_PWR_PARASITE 
+} ds1820_pwr_t;
+
+/* Family */
+typedef enum { 
+    DS1820_FAMILY_DS18S20 = 0x10,
+    DS1820_FAMILY_DS18B20 = 0x28
+} ds1820_family_t;
+
+
 typedef struct {
     gpio_num_t pin;
-    int family;
-    int power;
+    ds1820_family_t family;
+    ds1820_pwr_t power;
+    int resolution_bits;
     char rom[8];
     char scratchpad[9];
 } ds1820_device_t;
 
 ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom);
-ds1820_err_t ds1820_reset(ds1820_device_t *dev);
-ds1820_err_t ds1820_read_rom(ds1820_device_t *dev);
 ds1820_err_t ds1820_read_temp(ds1820_device_t *dev, float *temp);
-ds1820_err_t ds18b20_read_temp(ds1820_device_t *dev, float *temp);
 
 #endif /* DS1820_H */

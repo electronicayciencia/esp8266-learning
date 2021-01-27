@@ -19,23 +19,18 @@
 #define LOW  0
 #define HIGH 1
 
-#define PIN_1WIRE  GPIO_NUM_0
+#define PIN_1WIRE  GPIO_NUM_2
 
 void app_main(void) {
     //esp_log_level_set(TAG, ESP_LOG_DEBUG);
 
     puts("DS1820 Test Program for ESP-IDF");
 
-    ds1820_device_t dev = ds1820_init(PIN_1WIRE, DS1820_ROM_UNKNOWN);
-
-    if (ds1820_reset(PIN_1WIRE) == DS1820_ERR_OK) {
-        ESP_LOGI(TAG, "Device detected!");
-        ds1820_read_rom(PIN_1WIRE);
-    }
+    ds1820_device_t *dev = ds1820_init(PIN_1WIRE, DS1820_ROM_UNKNOWN);
 
     while (1) {
         float temperature;
-        int result = ds18b20_read_temp(PIN_1WIRE, &temperature);
+        int result = ds1820_read_temp(dev, &temperature);
         
         if (result == DS1820_ERR_NODEVICE) {
             ESP_LOGW(TAG, "Device not present.");
