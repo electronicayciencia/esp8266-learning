@@ -6,20 +6,16 @@
 #ifndef DS1820_H
 #define DS1820_H
 
-/* Errors */
-#define DS1820_ERR_OK 0
-#define DS1820_ERR_BADCRC 1
-#define DS1820_ERR_NODEVICE 2
-
-
-
-/* Misc */
 #define DS1820_ROM_UNKNOWN NULL
-
-
 #include "driver/gpio.h"
 
-typedef int ds1820_err_t;
+/* Errors */
+typedef enum {
+    DS1820_ERR_OK,       // success
+    DS1820_ERR_BADCRC,   // invalid crc
+    DS1820_ERR_NOANSWER, // selected device did not respond
+    DS1820_ERR_EMPTYBUS  // no devices present (presence pulse)
+} ds1820_err_t;
 
 /* Power supply model */
 typedef enum { 

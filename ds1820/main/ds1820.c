@@ -47,7 +47,8 @@ typedef enum {
     CMD_READ_PWR  = 0xB4,  /* Read Power Supply command */
     CMD_READ_ROM  = 0x33,  /* Read ROM command */
     CMD_READ_SP   = 0xBE,  /* Read Scratchpad command */
-    CMD_CONVERT_T = 0x44   /* Convert T command */
+    CMD_CONVERT_T = 0x44,  /* Convert T command */
+    CMD_MATCH_ROM = 0x55   /* Match ROM command */
 } ds1820_cmd_t;
 
 
@@ -76,8 +77,7 @@ static void send_bit(gpio_num_t pin, bool bit) {
 }
 
 /* Sends 8 bit in a row, LSB first */
-/* Only used to send commands right now */
-static void send_cmd(ds1820_device_t *dev, ds1820_cmd_t cmd) {
+static void send_byte(ds1820_device_t *dev, char cmd) {
     int i;
 
     for (i = 0; i < 8; i++) {
@@ -127,17 +127,17 @@ static void strong_pullup(ds1820_device_t *dev, uint32_t ms) {
     gpio_set_direction(dev->pin, GPIO_MODE_OUTPUT_OD);
 }
 
-/* Sends a reset pulse and waits for a presence response */
+/* Reset the bus where the device is and wait for a presence response */
 static ds1820_err_t reset (ds1820_device_t *dev) {
     ENTER_CRITICAL();
-    low(dev->pin, TRSTL);           /* Reset pulse */
-    ets_delay_us(TPDHIGH);     /* Wait 15-60 and answer back*/
+    low(dev->pin, TRSTL);               /* Reset pulse */
+    ets_delay_us(TPDHIGH);              /* Wait 15-60us */
     int v = gpio_get_level(dev->pin);   /* DS1820 pulls down if present */
     EXIT_CRITICAL();
     ets_delay_us(TRSTH-TPDHIGH+TREC);
     
     if (v == HIGH) {
-        return DS1820_ERR_NODEVICE;
+        return DS1820_ERR_EMPTYBUS;
     }
 
     return DS1820_ERR_OK;
@@ -178,12 +178,14 @@ static unsigned char crc8 (char *str, size_t len) {
    Only usable when there is just one device in the bus. */
 static ds1820_err_t read_rom(ds1820_device_t *dev) {
     ESP_LOGI(TAG, "Reading ROM data (Cmd 33h)");
-    send_cmd(dev, CMD_READ_ROM);
+    send_byte(dev, CMD_READ_ROM);
 
     int i;
     for (i = 0; i < 8; i++) {
         dev->rom[i] = read_byte(dev->pin);
     }
+
+    int remainder = crc8(dev->rom, 8);
 
     ESP_LOGI(TAG, "ROM data: %02X %02X %02X %02X %02X %02X %02X %02X - CRC %s",
         dev->rom[0],
@@ -194,27 +196,52 @@ static ds1820_err_t read_rom(ds1820_device_t *dev) {
         dev->rom[5],
         dev->rom[6],
         dev->rom[7],
-        crc8(dev->rom, 8) ? "error" : "OK");
+        remainder ? "error" : "OK");
 
     if (reset(dev) != DS1820_ERR_OK) {
-        return DS1820_ERR_NODEVICE;
+        return DS1820_ERR_EMPTYBUS;
+    }
+
+    if (remainder != 0) {
+        return DS1820_ERR_BADCRC;
     }
 
     return DS1820_ERR_OK;
 }
 
+/* Call the device in dev. 
+   If the ROM is NULL pointer, it uses SKIP ROM instead. */
+static void address_device(ds1820_device_t *dev) {
+    if (dev->rom == NULL) {
+        send_byte(dev, CMD_SKIP_ROM);
+    }
+    else {
+        send_byte(dev, CMD_MATCH_ROM);
+        for (int i = 0; i < 8; i++) {
+            send_byte(dev, dev->rom[i]);
+        }
+    }
+}
+
+
 /* Read power mode used by the devices. */
 static ds1820_pwr_t read_power_mode(ds1820_device_t *dev) {
-    send_cmd(dev, CMD_SKIP_ROM);
-    send_cmd(dev, CMD_READ_PWR);
+    address_device(dev);
+    send_byte(dev, CMD_READ_PWR);
+    int v = read_bit(dev->pin);
 
-    return read_bit(dev->pin) == LOW ? DS1820_PWR_PARASITE
-                                     : DS1820_PWR_VCC;
+    if (reset(dev) != DS1820_ERR_OK) {
+        return DS1820_ERR_EMPTYBUS;
+    }
+
+    return v == LOW ? DS1820_PWR_PARASITE
+                    : DS1820_PWR_VCC;
 }
 
 /* Starts a temperature conversion and waits for it to be done */
 static ds1820_err_t convert_t (ds1820_device_t *dev) {
-    send_cmd(dev, CMD_CONVERT_T);
+    address_device(dev);
+    send_byte(dev, CMD_CONVERT_T);
 
     if (dev->power == DS1820_PWR_PARASITE) {
         strong_pullup(dev, TCONV << (dev->resolution_bits - 9));
@@ -224,21 +251,25 @@ static ds1820_err_t convert_t (ds1820_device_t *dev) {
             vTaskDelay(20 / portTICK_RATE_MS);  // ask every 20 ms
     }
     
+    if (reset(dev) != DS1820_ERR_OK) {
+        return DS1820_ERR_EMPTYBUS;
+    }
+
     return DS1820_ERR_OK;
 }
 
 /* Return DS1820_ERR_OK if OK and DS1820_ERR_BADCRC if error */
 ds1820_err_t read_scratchpad(ds1820_device_t *dev) {
+    int allones = 0;
 
-    if (reset(dev) != DS1820_ERR_OK) {
-        return DS1820_ERR_NODEVICE;
-    }
-
-    send_cmd(dev, CMD_SKIP_ROM);
-    send_cmd(dev, CMD_READ_SP);
+    address_device(dev);
+    send_byte(dev, CMD_READ_SP);
     int i;
     for (i = 0; i < 9; i++) {
         dev->scratchpad[i] = read_byte(dev->pin);
+        if (dev->scratchpad[i] == 0xFF) {
+            allones++; // device is not there?
+        }
     }
     
     int crc_remainder = crc8(dev->scratchpad, 9);
@@ -256,33 +287,28 @@ ds1820_err_t read_scratchpad(ds1820_device_t *dev) {
         crc_remainder == 0 ? "OK" : "error");
 
     if (reset(dev) != DS1820_ERR_OK) {
-        return DS1820_ERR_NODEVICE;
+        return DS1820_ERR_EMPTYBUS;
     }
 
-    if (crc_remainder) {
-        return DS1820_ERR_BADCRC;
+    // Device definitely is not there
+    if (allones >= 9) {
+        return DS1820_ERR_NOANSWER;
     }
-    else {
-        return DS1820_ERR_OK;
-    }
+
+    return crc_remainder == 0 ? DS1820_ERR_OK
+                              : DS1820_ERR_BADCRC;
 }
 
 /* Not tested with negative temperature */
 /* Return DS1820_ERR_OK if OK and DS1820_ERR_BADCRC if error */
 ds1820_err_t ds1820_read_temp(ds1820_device_t *dev, float *temp) {
-    if (reset(dev) != DS1820_ERR_OK) {
-        return DS1820_ERR_NODEVICE;
-    }
+    ds1820_err_t result;
 
-    send_cmd(dev, CMD_SKIP_ROM);
-    convert_t(dev);
+    result = convert_t(dev);
+    if (result != DS1820_ERR_OK) return result;
 
-    if (reset(dev) != DS1820_ERR_OK) {
-        return DS1820_ERR_NODEVICE;
-    }
-
-    /* TODO: check for CRC, repeat if bad */
-    int result = read_scratchpad(dev);
+    result = read_scratchpad(dev);
+    if (result != DS1820_ERR_OK) return result;
 
     /* DS1820 Low res temp (fixed point arithmertic) */
     //temp = (float) temp_read / 2;
@@ -301,16 +327,10 @@ ds1820_err_t ds1820_read_temp(ds1820_device_t *dev, float *temp) {
         *temp = ((dev->scratchpad[1] << 8) + dev->scratchpad[0]) / 16.0;
     }
 
-    if (reset(dev) != DS1820_ERR_OK) {
-        return DS1820_ERR_NODEVICE;
-    }
+    result = reset(dev);
+    if (result != DS1820_ERR_OK) return result;
 
-    if (result == DS1820_ERR_BADCRC) {
-        return DS1820_ERR_BADCRC;
-    }
-    else {
-        return DS1820_ERR_OK;
-    }
+    return DS1820_ERR_OK;
 }
 
 
@@ -321,7 +341,7 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
     ds1820_device_t *dev = malloc(sizeof(ds1820_device_t));
 
     if (dev == NULL) {
-        ESP_LOGE(TAG, "Cannot allocate memory.");
+        ESP_LOGW(TAG, "Cannot allocate memory.");
         return NULL;
     }
     
@@ -334,21 +354,19 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
 
     /* Check if any device exists */
     if (reset(dev) != DS1820_ERR_OK) {
-        ESP_LOGE(TAG, "No devices in 1-wire bus.");
+        ESP_LOGW(TAG, "No devices in 1-wire bus.");
         return NULL;
     }
 
     ESP_LOGI(TAG, "At least 1 device detected!");
 
-    /* Learn rom */
+    /* Learn rom. Only if one device in bus. */
     if (rom != NULL) {
-        ESP_LOGW(TAG, "Multiple devices in same bus not supported yet.");
         memcpy(dev->rom, rom, 8);
-        /* TODO: Check if that device actually answer */
     }
     else {
         if (read_rom(dev) != DS1820_ERR_OK) {
-            ESP_LOGE(TAG, "Error reading ROM. Multiple devices?");
+            ESP_LOGW(TAG, "Error reading ROM. Multiple devices?");
             return NULL;
         }
     }
@@ -366,7 +384,7 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
             break;
 
         default:
-            ESP_LOGE(TAG, "Unkown device family: %02X.", dev->rom[0]);
+            ESP_LOGW(TAG, "Unkown device family: %02X.", dev->rom[0]);
             return NULL;
     }
 

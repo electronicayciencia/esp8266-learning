@@ -86,3 +86,9 @@ Output:
 ## main.c
 
 Example program.
+
+## Notes
+
+unknown rom (1 device)
+known rom (multiple devices)
+parasitic power
