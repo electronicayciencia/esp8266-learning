@@ -87,9 +87,11 @@ else {
 }
 ```
 
-## main.c
+## read_temp.c
 
 Example program.
+
+Rename function `read_temp` to `app_main` to run it.
 
 ## Notes
 
