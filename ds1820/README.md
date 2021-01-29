@@ -6,7 +6,7 @@ Try to read a DS1820 1-wire temperature sensor.
 
 Stand-alone file. It detects if any device is present by testing presence pulse.
 
-Using Poor-Mans's Logic Analyzer:
+Using Poor-Man's Logic Analyzer:
 
     us , logic
     ..., 1
@@ -17,71 +17,75 @@ Using Poor-Mans's Logic Analyzer:
 
 The master sets line down for 500us, then up again. After 30us slave takes the bus and keeps it down for 100us.
 
-## ds1820.c / ds1820.h
+## DS1820 library
 
 Library to read temperature and ROM from a DS1820 or DS18S20 (but not DS18B20).
 
-Only one device supported at a time.
+### Features
 
-Functions:
+- Unknown ROM operation (only one device in bus. Useful to discover the ROM number.)
+- Multiple devices with known ROMs (ROM addressing mode)
+- Parasite power detection (strong pull-up)
 
-### int ds1820_reset (gpio_num_t pin)
+Bus scanning is not supported.
 
-Reset the bus. Return `DS1820_ERR_OK` if any device is detected, `DS1820_ERR_NODEVICE` if not. `pin` argument is the GPIO pin which has the 1-wire device connected.
+### Usage
 
-Example:
+#### Initialization
 
-```c
-if (ds1820_reset(PIN_1WIRE) == DS1820_ERR_OK) {
-    ESP_LOGI(TAG, "Device detected!");
-}
-```
-
-### void ds1820_read_rom(gpio_num_t pin)
-
-Read the ROM and print its contents as Info log.
-
-Example:
+Initialization **from unknown ROM**. Simple when there are no more than one device connected.
 
 ```c
-ds1820_read_rom(PIN_1WIRE);
+ds1820_device_t *dev = ds1820_init(PIN_1WIRE, DS1820_ROM_UNKNOWN);
 ```
 
-Output:
+Serial output:
 
-    I (356) main: Device detected!
-    I (361) ds1820: Reading ROM data (Cmd 33h)
-    I (375) ds1820: ROM data: 10 C4 54 E3 01 08 00 2E - CRC OK
+    I (387) ds1820: At least 1 device detected!
+    I (394) ds1820: Reading ROM data (Cmd 33h)
+    I (409) ds1820: ROM data: 10 C4 54 E3 01 08 00 2E - CRC OK
+    I (412) ds1820: Device family is DS1820 or DS18S20.
+    I (428) ds1820: One o more devices are using parasitic power. Strong pull up active.
 
-### int ds1820_read_temp(gpio_num_t pin, float *temp)
+ROM, family and power mode are detected automatically.
 
-Reads the temperature.
+Initialization **from known ROM**. Needed when you have multiple devices in the bus:
 
-Can return:
 
-- `DS1820_ERR_OK` if everything was ok
-- `DS1820_ERR_NODEVICE` if the device didn't answer
-- `DS1820_ERR_BADCRC` if the CRC check failed (returned temperature might be incorrect)
+```c
+#define ROM_1 "\x10\x8C\x67\xE3\x01\x08\x00\x30"
 
-Example:
+ds1820_device_t *device_1 = ds1820_init(PIN_1WIRE, ROM_1);
+```
+
+Return a pointer to a newly allocated DS1820 structure or **NULL** on error.
+
+#### Reading Temperature
 
 ```c
 float temperature;
-int result = ds1820_read_temp(PIN_1WIRE, &temperature);
 
-if (result == DS1820_ERR_NODEVICE) {
-    ESP_LOGW(TAG, "Device not present.");
+ds1820_err_t result = ds1820_read_temp(dev, &temperature);
+
+if (result == DS1820_ERR_OK) {
+    printf("Temperature is %.2f\n", temperature);
+}
+
+else if (result == DS1820_ERR_EMPTYBUS) {
+    ESP_LOGW(TAG, "No devices detected.");
+}
+
+else if (result == DS1820_ERR_NOANSWER) {
+    ESP_LOGW(TAG, "Select device did not respond.");
+}
+
+else if (result == DS1820_ERR_BADCRC) {
+    ESP_LOGW(TAG, "CRC Error.");
 }
 else {
-    printf("Temperature is %.2fºC (crc %s)\n", 
-        temperature, 
-        result == DS1820_ERR_OK ? "ok" : "error");
+    ESP_LOGE(TAG, "Unknown error.");
 }
 ```
-
-Output:
-
-    Temperature is 19.88ºC (crc ok)
 
 ## main.c
 
