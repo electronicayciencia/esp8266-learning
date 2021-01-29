@@ -355,6 +355,7 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
     /* Check if any device exists */
     if (reset(dev) != DS1820_ERR_OK) {
         ESP_LOGW(TAG, "No devices in 1-wire bus.");
+        free(dev);
         return NULL;
     }
 
@@ -367,6 +368,7 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
     else {
         if (read_rom(dev) != DS1820_ERR_OK) {
             ESP_LOGW(TAG, "Error reading ROM. Multiple devices?");
+            free(dev);
             return NULL;
         }
     }
@@ -385,6 +387,7 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
 
         default:
             ESP_LOGW(TAG, "Unkown device family: %02X.", dev->rom[0]);
+            free(dev);
             return NULL;
     }
 
@@ -398,4 +401,7 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
     return dev;
 }
 
-/* TODO: free */
+void ds1820_destroy(ds1820_device_t *dev) {
+    if (dev == NULL) return;
+    free(dev);
+}

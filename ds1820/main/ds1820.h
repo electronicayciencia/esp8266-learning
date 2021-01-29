@@ -41,5 +41,6 @@ typedef struct {
 
 ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom);
 ds1820_err_t ds1820_read_temp(ds1820_device_t *dev, float *temp);
+void ds1820_destroy(ds1820_device_t *dev);
 
 #endif /* DS1820_H */
