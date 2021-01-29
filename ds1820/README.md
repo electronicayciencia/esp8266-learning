@@ -51,7 +51,6 @@ ROM, family and power mode are detected automatically.
 
 Initialization **from known ROM**. Needed when you have multiple devices in the bus:
 
-
 ```c
 #define ROM_1 "\x10\x8C\x67\xE3\x01\x08\x00\x30"
 
