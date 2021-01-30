@@ -1,4 +1,4 @@
-/* Detect DS1820 presence pulse
+/* Multiple DS1820
 */
 
 #include <stdio.h>
@@ -16,55 +16,53 @@
 #include "ds1820.h"
 
 #define TAG  "main"
-#define LOW  0
-#define HIGH 1
 
-#define ROM_1 "\x10\x8C\x67\xE3\x01\x08\x00\x30"
-#define ROM_2 "\x10\xC4\x54\xE3\x01\x08\x00\x2E"
-#define ROM_3 "\x28\xFF\x8C\x7C\x81\x16\x03\x75"
+#define NUMDEVICES 3
 
 // GPIO_NUM_2 do not seem to work 
 #define PIN_1WIRE  GPIO_NUM_0
 
+#define ROM_0 "\x10\x8C\x67\xE3\x01\x08\x00\x30"
+#define ROM_1 "\x10\xC4\x54\xE3\x01\x08\x00\x2E"
+#define ROM_2 "\x28\xFF\x8C\x7C\x81\x16\x03\x75"
+
 void app_main(void) {
-    //esp_log_level_set(TAG, ESP_LOG_DEBUG);
 
-    puts("DS1820 Test Program for ESP-IDF");
+    ds1820_device_t *sensors[NUMDEVICES];
 
-    ds1820_device_t *dev = ds1820_init(PIN_1WIRE, DS1820_ROM_UNKNOWN);
-    //ds1820_device_t *dev = ds1820_init(PIN_1WIRE, ROM_1);
+    puts("Multiple DS1820 Test Program for ESP-IDF");
 
-
-    if (dev == NULL) {
-        ESP_LOGE(TAG, "Error");
-        vTaskDelay(1000 / portTICK_RATE_MS);
-        esp_restart();
-
-    }
+    sensors[0] = ds1820_init(PIN_1WIRE, ROM_0);
+    sensors[1] = ds1820_init(PIN_1WIRE, ROM_1);
+    sensors[2] = ds1820_init(PIN_1WIRE, ROM_2);
 
     while (1) {
         float temperature;
 
-        ds1820_err_t result = ds1820_read_temp(dev, &temperature);
-        
-        if (result == DS1820_ERR_OK) {
-            printf("Temperature is %.2f\n", temperature);
+        for (int i = 0; i < NUMDEVICES; i++) {
+
+            printf("Device #%d: ", i);
+
+            ds1820_err_t result = ds1820_read_temp(sensors[i], &temperature);
+
+            if (result == DS1820_ERR_OK) {
+                printf("%.2f", temperature);
+            }
+
+            else if (result == DS1820_ERR_EMPTYBUS || 
+                     result == DS1820_ERR_NOANSWER) {
+                printf("not present.\n");
+            }
+
+            else if (result == DS1820_ERR_BADCRC) {
+                printf("crc error.\n");
+            }
+            else {
+                printf("unknown error.");
+            }
         }
 
-        else if (result == DS1820_ERR_EMPTYBUS) {
-            ESP_LOGW(TAG, "No devices detected.");
-        }
-
-        else if (result == DS1820_ERR_NOANSWER) {
-            ESP_LOGW(TAG, "Select device did not respond.");
-        }
-
-        else if (result == DS1820_ERR_BADCRC) {
-            ESP_LOGW(TAG, "CRC Error.");
-        }
-        else {
-            ESP_LOGE(TAG, "Unknown error.");
-        }
+        puts("");
 
         vTaskDelay(1000 / portTICK_RATE_MS);
     }

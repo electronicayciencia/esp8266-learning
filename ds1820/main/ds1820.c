@@ -393,7 +393,7 @@ ds1820_device_t *ds1820_init(gpio_num_t pin, const char *rom) {
 
     /* Learn power mode */
     if (read_power_mode(dev) == DS1820_PWR_PARASITE) {
-        ESP_LOGI(TAG, "One o more devices are using parasitic power. "
+        ESP_LOGI(TAG, "This device is using parasitic power. "
                       "Strong pull up active.");
         dev->power = DS1820_PWR_PARASITE;
     }
