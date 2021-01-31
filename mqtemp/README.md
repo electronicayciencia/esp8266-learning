@@ -19,65 +19,13 @@ Create database:
 
     $ influxdb
     create database mqtemp
-    create user telegraf with password 'xxxxxx'
     create user grafana with password 'xxxxxx'
-    grant all on mqtemp to telegraf
     grant all on mqtemp to grafana
 
 
-Configure grafana datasource.
+Configure grafana datasource. http://raspberrypi.local:3000/
 
-    $ apt-get install telegraf
-
-
-```conf
-[[inputs.mqtt_consumer]]
-  servers = ["tcp://127.0.0.1:1883"]
-
-  topics = [
-     "mqtemp/data",
-   ]
-  data_format = "influx"
-
-...
-
-[[outputs.influxdb]]
-  ## The full HTTP or UDP URL for your InfluxDB instance.
-  urls = ["http://127.0.0.1:8086"]
-
-  database = "mqtemp"
-  skip_database_creation = true
-  username = "telegraf"
-  password = "xxxx"
-
-```
-
-Restart telegraf: `service telegraf status`
-
-Check the status using `service telegraf status`.
-
-If errors `grep telegraf /var/log/syslog | tail`.
-
-```
-> show measurements
-name: measurements
-name
-----
-cpu
-disk
-diskio
-kernel
-mem
-processes
-swap
-system
-```
-
-mqtemp is not there, but a lot of garbage. Removing telegraf right now.
-
-Testing https://github.com/Nilhcem/home-monitoring-grafana/blob/master/02-bridge/main.py
-
-Too complicated, use bash *process substitution* to make a bridge:
+Use bash *process substitution* to make a bridge between mosquitto and influxdb:
 
 ```bash
 #!/bin/bash
