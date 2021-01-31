@@ -8,5 +8,6 @@
 
 # using esp-idf
 */build/*
-*/sdkconfig.old
 esp_bus/main/config.h
+*/sdkconfig
+*/sdkconfig.*

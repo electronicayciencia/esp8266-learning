@@ -6,15 +6,19 @@
                 "${default}",
                 "D:/Programas/ESP/msys32/opt/xtensa-lx106-elf/xtensa-lx106-elf/include",
                 "D:/Programas/ESP/msys32/opt/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/5.2.0/include",
+                "D:/Programas/ESP/msys32/opt/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/5.2.0/include-fixed/",
                 "D:/Programas/ESP/msys32/opt/ESP8266_RTOS_SDK/components/**",
-                "D:/Programas/ESP/msys32/opt/ESP8266_RTOS_SDK/components/freertos/port/esp8266/include"
+                "D:/Programas/ESP/msys32/opt/ESP8266_RTOS_SDK/components/freertos/port/esp8266/include",
+                "D:/Programas/ESP/msys32/opt/xtensa-lx106-elf/xtensa-lx106-elf/include/**"
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE",
                 "CONFIG_LOG_DEFAULT_LEVEL",
-                "CONFIG_FREERTOS_HZ"
+                "WIFI_INIT_CONFIG_DEFAULT",
+                "CONFIG_FREERTOS_HZ",
+                "__ESP_FILE__"
             ],
             "cStandard": "c99",
             "cppStandard": "c++17",
