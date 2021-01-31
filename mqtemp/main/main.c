@@ -12,8 +12,10 @@
 
 #include "esp_log.h"
 #include "esp_system.h"
+#include "mqtt_client.h"
 
 #include "ds1820.h"
+#include "wifi.h"
 
 #define TAG  "main"
 
@@ -25,9 +27,18 @@
 #define PIN_1WIRE  GPIO_NUM_0
 
 void app_main(void) {
-    //esp_log_level_set(TAG, ESP_LOG_DEBUG);
+    ESP_LOGI(TAG, 
+        "MQTEMP: Read the temperature from DS18B20 and report it via MQTT.");
 
-    puts("MQTEMP: Read the temperature from DS18B20 and report it via MQTT.");
+    wifi_init();
+
+    esp_mqtt_client_config_t mqtt_cfg = {
+        .uri = CONFIG_BROKER_URL,
+    };
+
+    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_start(client);
+
 
     ds1820_device_t *dev = ds1820_init(PIN_1WIRE, DS1820_ROM_UNKNOWN);
     //ds1820_device_t *dev = ds1820_init(PIN_1WIRE, ROM_1);
@@ -37,16 +48,19 @@ void app_main(void) {
         ESP_LOGE(TAG, "Error");
         vTaskDelay(1000 / portTICK_RATE_MS);
         esp_restart();
-
     }
 
+
     while (1) {
+        char buffer[20] = 0;
         float temperature;
 
         ds1820_err_t result = ds1820_read_temp(dev, &temperature);
         
         if (result == DS1820_ERR_OK) {
-            printf("Temperature is %.2f\n", temperature);
+            snprintf(buffer, sizeof buffer, "%d\t%6.2f", time(NULL));
+            printf("Sending: %s\n", buffer);
+            esp_mqtt_client_publish(client, "/mqtemp", buffer, 0, 0, 0);
         }
 
         else if (result == DS1820_ERR_EMPTYBUS) {
@@ -64,6 +78,6 @@ void app_main(void) {
             ESP_LOGE(TAG, "Unknown error.");
         }
 
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        vTaskDelay(500 / portTICK_RATE_MS);
     }
 }
