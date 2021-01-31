@@ -9,8 +9,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-//#include "driver/gpio.h"
-
 #include "esp_log.h"
 #include "esp_system.h"
 #include "mqtt_client.h"
@@ -37,7 +35,6 @@ void app_main(void) {
     esp_mqtt_client_start(client);
     vTaskDelay(2000 / portTICK_RATE_MS); // use event loop instead
 
-
     ds1820_device_t *dev = ds1820_init(PIN_1WIRE, DS1820_ROM_UNKNOWN);
 
     if (dev == NULL) {
@@ -47,34 +44,18 @@ void app_main(void) {
         esp_restart();
     }
 
-    esp_mqtt_client_publish(client, "/mqtemp/log", "Running...", 0, 0, 0);
-
     while (1) {
-        char buffer[20];
+        char buffer[100];
         float temperature;
 
         ds1820_err_t result = ds1820_read_temp(dev, &temperature);
         
         if (result == DS1820_ERR_OK) {
-            snprintf(buffer, sizeof buffer, "%ld\t%6.2f", 
+            snprintf(buffer, sizeof buffer, "mqtemp ontime=%ld,temp=%.3f",
                 time(NULL), 
                 temperature);
             printf("Sending: %s\n", buffer);
             esp_mqtt_client_publish(client, "/mqtemp/data", buffer, 0, 0, 0);
-        }
-
-        else if (result == DS1820_ERR_NOANSWER) {
-            esp_mqtt_client_publish(client, "/mqtemp/log", "No answer from device", 0, 0, 0);
-            ESP_LOGW(TAG, "Select device did not respond.");
-        }
-
-        else if (result == DS1820_ERR_BADCRC) {
-            esp_mqtt_client_publish(client, "/mqtemp/log", "CRC Error.", 0, 0, 0);
-            ESP_LOGW(TAG, "CRC Error.");
-        }
-        else {
-            esp_mqtt_client_publish(client, "/mqtemp/log", "Unknown error.", 0, 0, 0);
-            ESP_LOGE(TAG, "Unknown error.");
         }
 
         vTaskDelay(100 / portTICK_RATE_MS);
