@@ -26,6 +26,7 @@
 #define ROM_1 "\x10\xC4\x54\xE3\x01\x08\x00\x2E"
 #define ROM_2 "\x28\xFF\x8C\x7C\x81\x16\x03\x75"
 
+//void not_app_main(void) {
 void app_main(void) {
 
     ds1820_device_t *sensors[NUMDEVICES];
@@ -44,9 +45,13 @@ void app_main(void) {
             printf("Device #%d: ", i);
 
             ds1820_err_t result = ds1820_read_temp(sensors[i], &temperature);
+            
+            if (sensors[i] == NULL) {
+                continue;
+            }
 
             if (result == DS1820_ERR_OK) {
-                printf("%.2f", temperature);
+                printf("%.2f\n", temperature);
             }
 
             else if (result == DS1820_ERR_EMPTYBUS || 

@@ -15,7 +15,7 @@
 #include "esp_timer.h" // high resolution timer
 
 #define TAG        "main"
-#define PIN_1WIRE  GPIO_NUM_0
+#define PIN_1WIRE  GPIO_NUM_2
 
 #define LOW  0
 #define HIGH 1
@@ -37,7 +37,7 @@ void presence(void)  // rename to app_main
     gpio_pullup_en(PIN_1WIRE);
 
     while (1) {
-        vTaskDelay(5000 / portTICK_RATE_MS);
+        vTaskDelay(1000 / portTICK_RATE_MS);
 
         // set the bus low for more than TRSTL_MIN us.
         gpio_set_level(PIN_1WIRE, LOW);
@@ -58,7 +58,7 @@ void presence(void)  // rename to app_main
             ESP_LOGI(TAG, "Presence pulse detected!");
         }
         else {
-            ESP_LOGD(TAG, "No device present.");
+            ESP_LOGI(TAG, "No device present.");
         }
     }
 }

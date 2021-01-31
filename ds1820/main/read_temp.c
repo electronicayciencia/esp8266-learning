@@ -23,7 +23,7 @@
 #define ROM_2 "\x10\xC4\x54\xE3\x01\x08\x00\x2E"
 #define ROM_3 "\x28\xFF\x8C\x7C\x81\x16\x03\x75"
 
-// GPIO_NUM_2 do not seem to work 
+// GPIO_NUM_2 do not seem to work
 #define PIN_1WIRE  GPIO_NUM_0
 
 //void app_main(void) {
@@ -40,7 +40,6 @@ void read_temp(void) {
         ESP_LOGE(TAG, "Error");
         vTaskDelay(1000 / portTICK_RATE_MS);
         esp_restart();
-
     }
 
     while (1) {
