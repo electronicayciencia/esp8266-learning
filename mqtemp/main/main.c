@@ -17,6 +17,8 @@
 #include "wifi.h"
 
 #define TAG  "MQTEMP"
+//const char* MQTT_DATA_MSG = "{\"ontime\":%ld,\"temp\":%.3f}";
+const char* MQTT_DATA_MSG = "%.3f";
 
 // GPIO_NUM_2 do not seem to work 
 #define PIN_1WIRE  GPIO_NUM_0
@@ -51,8 +53,8 @@ void app_main(void) {
         ds1820_err_t result = ds1820_read_temp(dev, &temperature);
         
         if (result == DS1820_ERR_OK) {
-            snprintf(buffer, sizeof buffer, "mqtemp ontime=%ld,temp=%.3f",
-                time(NULL), 
+            snprintf(buffer, sizeof buffer, MQTT_DATA_MSG,
+                //time(NULL), 
                 temperature);
             printf("Sending: %s\n", buffer);
             esp_mqtt_client_publish(client, "/mqtemp/data", buffer, 0, 0, 0);
