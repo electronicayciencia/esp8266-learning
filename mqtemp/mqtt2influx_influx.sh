@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Bridge from MQTT to InfluxDB when the data is Influx line protocol:
+# topic -> ontime=165,temp=18.5
+
 TOPIC=/mqtemp/data
 DATABASE=mqtemp
 MEASURE=mqtemp

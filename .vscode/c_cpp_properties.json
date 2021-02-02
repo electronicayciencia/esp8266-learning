@@ -18,7 +18,8 @@
                 "CONFIG_LOG_DEFAULT_LEVEL",
                 "WIFI_INIT_CONFIG_DEFAULT",
                 "CONFIG_FREERTOS_HZ",
-                "__ESP_FILE__"
+                "__ESP_FILE__",
+                "CONFIG_BROKER_URL"
             ],
             "cStandard": "c99",
             "cppStandard": "c++17",

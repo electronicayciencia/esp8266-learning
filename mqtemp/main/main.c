@@ -17,10 +17,12 @@
 #include "wifi.h"
 
 #define TAG  "MQTEMP"
-//const char* MQTT_DATA_MSG = "{\"ontime\":%ld,\"temp\":%.3f}";
-const char* MQTT_DATA_MSG = "%.3f";
+const char* MQTT_DATA_MSG = "{\"ontime\":%ld,\"temp\":%.3f}";
+#define TOPIC_DATA   "mqtemp/data"
+#define TOPIC_STATUS "mqtemp/status"
+//const char* MQTT_DATA_MSG = "%.3f";
 
-// GPIO_NUM_2 do not seem to work 
+// GPIO_NUM_2 do not seem to work (pull-up issues?)
 #define PIN_1WIRE  GPIO_NUM_0
 
 void app_main(void) {
@@ -35,29 +37,39 @@ void app_main(void) {
 
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_start(client);
-    vTaskDelay(2000 / portTICK_RATE_MS); // use event loop instead
+
+    vTaskDelay(5000 / portTICK_RATE_MS); // use event loop instead
+    esp_mqtt_client_publish(client, TOPIC_STATUS, "Up", 0, 0, 0);
 
     ds1820_device_t *dev = ds1820_init(PIN_1WIRE, DS1820_ROM_UNKNOWN);
 
     if (dev == NULL) {
-        ESP_LOGE(TAG, "Error");
-        esp_mqtt_client_publish(client, "/mqtemp/log", "Bus error", 0, 0, 0);
+        const char *msg = "Bus error: restarting...";
+        ESP_LOGE(TAG, msg);
+        esp_mqtt_client_publish(client, TOPIC_STATUS, msg, 0, 0, 0);
         vTaskDelay(1000 / portTICK_RATE_MS);
+        esp_mqtt_client_stop(client);
+        esp_mqtt_client_destroy(client);
         esp_restart();
     }
 
-    while (1) {
-        char buffer[100];
-        float temperature;
+    char buffer[100];
+    float temperature;
 
+    while (1) {
         ds1820_err_t result = ds1820_read_temp(dev, &temperature);
         
         if (result == DS1820_ERR_OK) {
             snprintf(buffer, sizeof buffer, MQTT_DATA_MSG,
-                //time(NULL), 
+                time(NULL), 
                 temperature);
             printf("Sending: %s\n", buffer);
-            esp_mqtt_client_publish(client, "/mqtemp/data", buffer, 0, 0, 0);
+            esp_mqtt_client_publish(client, TOPIC_DATA, buffer, 0, 0, 0);
+        }
+        else {
+            snprintf(buffer, sizeof buffer, "Error %d", result);
+            printf("Sending: %s\n", buffer);
+            esp_mqtt_client_publish(client, TOPIC_STATUS, buffer, 0, 0, 0);
         }
 
         vTaskDelay(100 / portTICK_RATE_MS);
