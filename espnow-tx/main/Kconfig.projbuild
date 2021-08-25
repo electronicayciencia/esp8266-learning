@@ -1,0 +1,17 @@
+menu "ESPNOW Configuration"
+      
+config ESPNOW_CHANNEL
+    int "Channel"
+    default 1
+    range 1 13
+    help
+        The channel on which sending and receiving ESPNOW data.
+
+config ESPNOW_INTERVAL_MS
+    int "Send interval"
+    default 1000
+    range 0 65535
+    help
+        Delay between sending two ESPNOW data, unit: ms.
+
+endmenu
