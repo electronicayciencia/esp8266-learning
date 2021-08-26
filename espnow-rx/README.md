@@ -27,6 +27,6 @@ I (446) espnow-rx: Waiting for data
 
 Where `>|` is a mark of line with incoming data, MAC, len, message.
 
-
+Raspberry Pi UART does not accept 74880 bauds. So select 115200 as Monitor Baudrate in menuconfig.
 
 
