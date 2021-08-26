@@ -10,8 +10,6 @@
 #include "esp_sleep.h"
 #include "esp_system.h"
 
-#define DATALEN 250
-
 static const char *TAG = "espnow-tx";
 static uint8_t broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
@@ -74,11 +72,11 @@ void app_main()
     ESP_ERROR_CHECK( wifi_init() );
     ESP_ERROR_CHECK( espnow_init() );
 
-    uint8_t *data = malloc(sizeof(char) * DATALEN);
+    char *data = malloc(sizeof(char) * ESP_NOW_MAX_DATA_LEN);
 
-    snprintf((char*)data, DATALEN, "Data #%d", (uint8_t)esp_random());
+    snprintf(data, ESP_NOW_MAX_DATA_LEN, "Data #%d", (uint8_t)esp_random());
     
-    esp_err_t ret = esp_now_send(broadcast_mac, data, DATALEN);
+    esp_err_t ret = esp_now_send(broadcast_mac, (uint8_t*) data, strlen(data) + 1);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Send error: %d", ret);
     }
