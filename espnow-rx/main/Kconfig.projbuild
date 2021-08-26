@@ -1,0 +1,10 @@
+menu "ESPNOW Configuration"
+      
+config ESPNOW_CHANNEL
+    int "Channel"
+    default 1
+    range 1 13
+    help
+        The channel on which sending and receiving ESPNOW data.
+
+endmenu
