@@ -2,7 +2,9 @@
 
 Dump received data via uart. Can be used as ESPNOW->Serial bridge.
 
-Output formats:
+ESP-01S's blue LED (GPIO2) blinks on data reception.
+
+## Output formats:
 
 Readable:
 
@@ -19,14 +21,45 @@ Scriptable:
 
 ```
 I (446) espnow-rx: Waiting for data
->|cc50e35d6a90|10|Data #102
->|cc50e35d6a90|10|Data #228
->|cc50e35d6a90|9|Data #95
+d cc50e35d6a90 10 Data #102
+d cc50e35d6a90 10 Data #228
+d cc50e35d6a90 9 Data #95
 ...
 ```
 
-Where `>|` is a mark of line with incoming data, MAC, len, message.
+`d` means this is a line with incoming data. Fields are: MAC, length, message. 
+The terminator is newline so it is not allowed in the message.
+The separator is space to use it easily with bash/read.
 
-Raspberry Pi UART does not accept 74880 bauds. So select 115200 as Monitor Baudrate in menuconfig.
+## Raspberry Pi
 
+UART0 in Raspberry Pi 3:
+- GPIO15 -> RX
+
+Activate using `raspi-config`. 
+- Enable Harware UART.
+- Disable serial console.
+
+Raspberry Pi's UART does not accept 74880 bauds. So select 115200 as Monitor Baudrate in `make menuconfig`.
+
+To test the receiver:
+
+With serial terminal:
+
+```console
+# minicom -b 115200 -D /dev/ttyS0 -c on
+```
+
+Without serial terminal:
+
+```console
+# stty -F /dev/ttyS0 115200 raw
+# cat /dev/ttyS0
+>|cc50e35d6a90|10|Data #202
+>|cc50e35d6a90|9|Data #90
+```
+
+Install mosquito and tools:
+
+    # apt-get install mosquitto mosquitto-clients
 

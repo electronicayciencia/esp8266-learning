@@ -7,6 +7,7 @@
 #include "nvs_flash.h"
 #include "esp_wifi.h"
 #include "esp_now.h"
+#include <driver/gpio.h> // gpio_set_level & others
 
 #include "main.h"
 
@@ -31,13 +32,6 @@ static esp_err_t wifi_init(void)
     return ESP_OK;
 }
 
-
-/* Not used */
-/*
-static void my_espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status) {
-    ESP_LOGD(TAG, "Data sent.");
-}
-*/
 
 /* Receive data and put it into a queue */
 static void my_espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len) {
@@ -74,7 +68,6 @@ static esp_err_t espnow_init(void)
 
     /* Initialize ESPNOW and register sending and receiving callback function. */
     ESP_ERROR_CHECK( esp_now_init() );
-    //ESP_ERROR_CHECK( esp_now_register_send_cb(my_espnow_send_cb) );
     ESP_ERROR_CHECK( esp_now_register_recv_cb(my_espnow_recv_cb) );
 
     /* Add broadcast peer information to peer list. */
@@ -92,34 +85,47 @@ static esp_err_t espnow_init(void)
 }
 
 /* Read received data queue */
-static void wait_for_data(void *pvParameter) {
+static void read_incoming_data(void *pvParameter) {
     received_data_evt_t evt;
 
     ESP_LOGI(TAG, "Waiting for data");
 
     /* Text Only */
     while (xQueueReceive(received_data_queue, &evt, portMAX_DELAY) == pdTRUE) {
+        gpio_set_level(GPIO_NUM_2, 0); //on
+
         #ifdef CONFIG_ESPNOW_OUTPUT_READABLE
         printf("Received %d bytes from "MACSTR"\n>|%s|<\n", evt.data_len, // pretty format
             MAC2STR(evt.mac_addr), 
             evt.data);
         #else
-        printf(">|%02x%02x%02x%02x%02x%02x|%d|%s\n", // scriptable format
+        printf("d %02x%02x%02x%02x%02x%02x %d %s\n", // scriptable format
             MAC2STR(evt.mac_addr), 
             evt.data_len,
             evt.data);
         #endif
         free(evt.data);
+
+        gpio_set_level(GPIO_NUM_2, 1); //off
     }
 }
 
 
 
 void app_main() {
+
+    // Prepare GPIO for blinking blue LED in ESP-01S
+    gpio_config_t io_conf = {
+	    .pin_bit_mask = GPIO_Pin_2,
+	    .mode = GPIO_MODE_OUTPUT,
+    };
+	gpio_config(&io_conf);
+    gpio_set_level(GPIO_NUM_2, 1); // LED is inverted
+
     // Initialize NVS, wifi and esp_now
     ESP_ERROR_CHECK( nvs_flash_init() );
     ESP_ERROR_CHECK( wifi_init() );
     ESP_ERROR_CHECK( espnow_init() );
 
-    xTaskCreate(wait_for_data, "wait_for_data", 2048, NULL, 4, NULL);
+    xTaskCreate(read_incoming_data, "wait_for_data", 2048, NULL, 4, NULL);
 }
