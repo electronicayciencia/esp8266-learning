@@ -10,8 +10,6 @@
 
 #include "main.h"
 
-#define ESPNOW_QUEUE_SIZE 10
-
 static const char *TAG = "espnow-rx";
 static uint8_t broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 static xQueueHandle received_data_queue;
@@ -68,7 +66,7 @@ static void my_espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int 
 static esp_err_t espnow_init(void)
 {
     /* Initialize received data queue */
-    received_data_queue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(received_data_evt_t));
+    received_data_queue = xQueueCreate(CONFIG_ESPNOW_QUEUE_SIZE, sizeof(received_data_evt_t));
     if (received_data_queue == NULL) {
         ESP_LOGE(TAG, "Create queue fail");
         return ESP_FAIL;
@@ -101,7 +99,16 @@ static void wait_for_data(void *pvParameter) {
 
     /* Text Only */
     while (xQueueReceive(received_data_queue, &evt, portMAX_DELAY) == pdTRUE) {
-        printf("Received %d bytes from "MACSTR"\n>|%s|<\n", evt.data_len, MAC2STR(evt.mac_addr), evt.data);
+        #ifdef CONFIG_ESPNOW_OUTPUT_READABLE
+        printf("Received %d bytes from "MACSTR"\n>|%s|<\n", evt.data_len, // pretty format
+            MAC2STR(evt.mac_addr), 
+            evt.data);
+        #else
+        printf(">|%02x%02x%02x%02x%02x%02x|%d|%s\n", // scriptable format
+            MAC2STR(evt.mac_addr), 
+            evt.data_len,
+            evt.data);
+        #endif
         free(evt.data);
     }
 }
