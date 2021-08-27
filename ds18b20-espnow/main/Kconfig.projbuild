@@ -1,0 +1,17 @@
+menu "ESPNOW Thermometer Configuration"
+      
+config ESPNOW_CHANNEL
+    int "Channel"
+    default 1
+    range 1 13
+    help
+        The channel on which sending and receiving ESPNOW data.
+
+config MEASUREMENT_INTERVAL
+    int "Measurement interval"
+    default 1
+    range 0 65535
+    help
+        Time between measures in seconds. 0: continuosly.
+
+endmenu
