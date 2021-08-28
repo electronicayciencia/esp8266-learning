@@ -324,7 +324,9 @@ ds1820_err_t ds1820_read_temp(ds1820_device_t *dev, float *temp) {
     }
     /* DS18B20 12 bit resolution */
     else {
-        *temp = ((dev->scratchpad[1] << 8) + dev->scratchpad[0]) / 16.0;
+        int8_t msb = dev->scratchpad[1];
+        uint8_t lsb = dev->scratchpad[0];
+        *temp = ((msb << 8) + lsb) / 16.0;
     }
 
     result = reset(dev);
