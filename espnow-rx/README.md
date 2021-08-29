@@ -63,3 +63,32 @@ Install mosquito and tools:
 
     # apt-get install mosquitto mosquitto-clients
 
+
+## Notes
+
+### Max Queued Messages
+
+Mosquitto default configuration for `max_queued_messages` is not 1000, but 100.
+You need to add this to `mosquitto.conf` file.
+
+    max_queued_messages 1000
+
+### mosquito_sub is bash scripts
+
+Annoyingly, `mosquitto_sub` does ignore SIGPIPE (https://mosquitto.org/ChangeLog.txt) since version 1.1:
+
+> - Ignore SIGPIPE to prevent unnecessary client quits in threaded mode.
+
+It is solved in version 2.0.11:
+
+> - If sending mosquitto_sub output to a pipe, mosquitto_sub will now detect that the pipe has closed and disconnect. Closes #2164.
+
+But this version is not available in Rapberry OS yet.
+
+That means that when a bash script exits, `mosquito_sub` will continue running
+in background and consuming events.
+
+So fall back to python and Paho libraries.
+
+
+

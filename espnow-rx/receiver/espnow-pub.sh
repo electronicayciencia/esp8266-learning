@@ -20,6 +20,7 @@ echo "Topic: $TOPIC"
 while read -u 3 mark mac len msg
 do 
 	datens=$(date +%s%N)
+  msg=$(echo "$msg" | tr -d '\n\r')
 	pubmsg="$mac $datens $msg"
 
   mosquitto_pub -i espnowpub -t $TOPIC -q 2 -m "$pubmsg"
