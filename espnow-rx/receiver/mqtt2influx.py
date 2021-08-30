@@ -48,7 +48,7 @@ def lineformat(text):
     """Process one message into lineformat."""
     (mac, ns, msg) = text.split(" ", 2)
 
-    if not msg:
+    if not msg or " " in msg:
         raise ValueError
 
     line = "{},mac={} {} {}".format(FLUX_MEASURE, mac, msg, ns)
