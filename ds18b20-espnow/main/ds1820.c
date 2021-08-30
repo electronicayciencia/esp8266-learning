@@ -18,6 +18,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_timer.h" // high resolution timer
+#include "esp_sleep.h"
 
 #include "ds1820.h"
 
@@ -247,8 +248,11 @@ static ds1820_err_t convert_t (ds1820_device_t *dev) {
         strong_pullup(dev, TCONV << (dev->resolution_bits - 9));
     }
     else {
-        while (read_byte(dev->pin) != 0xFF)
-            vTaskDelay(20 / portTICK_RATE_MS);  // ask every 20 ms
+        while (read_byte(dev->pin) != 0xFF) {
+            esp_sleep_enable_timer_wakeup(150e3);  // ask every 150 ms
+            esp_light_sleep_start();
+            //vTaskDelay(20 / portTICK_RATE_MS);  // ask every 20 ms
+        }
     }
     
     if (reset(dev) != DS1820_ERR_OK) {

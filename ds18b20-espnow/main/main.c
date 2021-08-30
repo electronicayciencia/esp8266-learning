@@ -12,7 +12,7 @@
 #include "ds1820.h"
 
 // GPIO_NUM_2 do not seem to work (pull-up issues?)
-#define PIN_1WIRE  GPIO_NUM_0
+#define PIN_1WIRE  GPIO_NUM_2
 
 static const char *TAG = "espnow-tx";
 static uint8_t broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
