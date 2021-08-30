@@ -38,16 +38,19 @@ def on_message(client, userdata, msg):
 
     try:
         send_to_influx([line])
-        logging.info("Message sent to influxDB: " + text)
+        logging.info("Sucess: " + text)
     except:
         store_as_rejected(line)
-        logging.warning("Message stored as rejected: " + text)
+        logging.warning("Rejected: " + text)
 
 
 def lineformat(text):
     """Process one message into lineformat."""
     (mac, ns, msg) = text.split(" ", 2)
-    #TODO: check if msg is valid for influxdb
+
+    if not msg:
+        raise ValueError
+
     line = "{},mac={} {} {}".format(FLUX_MEASURE, mac, msg, ns)
     return line
 
