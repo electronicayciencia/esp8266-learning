@@ -83,7 +83,9 @@ static void sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type)
         }
 
         switch (type) {
-            case WIFI_PKT_MGMT || WIFI_PKT_CTRL || WIFI_PKT_DATA:
+            case WIFI_PKT_MGMT:
+            case WIFI_PKT_CTRL:
+            case WIFI_PKT_DATA:
                 break;
 
             case WIFI_PKT_MISC:
