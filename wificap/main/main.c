@@ -27,7 +27,7 @@ pcap header
 #define TAG "sniffer"
 
 #define MAC_HEADER_LEN 24
-#define SNIFFER_DATA_LEN 112
+#define SNIFFER_DATA_LEN 5000
 #define MAC_HDR_LEN_MAX 40
 
 static EventGroupHandle_t wifi_event_group;
@@ -49,7 +49,7 @@ static void print_pcap_header()
         .mayor = PCAP_VERSION_MAYOR,
         .minor = PCAP_VERSION_MINOR,
         .snaplen = 0x40000,
-        .linktype = LINKTYPE_IEEE802_11_RADIOTAP,
+        .linktype = LINKTYPE_IEEE802_11, // no radiotap
     };
 
     hexaprint(&pcaphead, sizeof(pcaphead));
@@ -63,6 +63,12 @@ static void sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type)
     uint8_t* frame = (uint8_t*)(rx_ctrl + 1);
     uint32_t len = rx_ctrl->sig_mode ? rx_ctrl->HT_length : rx_ctrl->legacy_length;
     uint32_t captured_len;
+
+    // Only ESPNOW
+    if (frame[25] != 0x18 ||
+        frame[26] != 0xfe ||
+        frame[27] != 0x34) return;
+
 
     uint8_t total_num = 1, count = 0;
     uint16_t seq_buf = 0;
@@ -89,9 +95,6 @@ static void sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type)
                 break;
 
             case WIFI_PKT_MISC:
-                len = len > MAC_HEADER_LEN ? MAC_HEADER_LEN : len;
-                break;
-
             default :
                 return;
         }
@@ -104,7 +107,7 @@ static void sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type)
     }
 
     captured_len = len > SNIFFER_DATA_LEN ? SNIFFER_DATA_LEN : len;
-
+/*
     // TODO: Get fields from rx control header
     radiotap_header_flags_t radiohead_flags = {
         .flags = RADIOTAP_FLAGS_INCLUDE_FCS, // TODO: check that with control header
@@ -115,25 +118,33 @@ static void sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type)
         .present_fields = RADIOTAP_PRESENT_FIELDS_FLAGS,
     };
 
-
+*/
     int64_t timestamp_us = esp_timer_get_time();
 
+ /*
     frame_header_t framehead = {
         .timestamp = timestamp_us / 1e6,
         .microseconds = timestamp_us % (int64_t)1e6,
         .size_file = captured_len + sizeof(radiohead) + sizeof(radiohead_flags),
         .size_wire = len + sizeof(radiohead) + sizeof(radiohead_flags),
     };
+*/
+
+    frame_header_t framehead = {
+        .timestamp = timestamp_us / 1e6,
+        .microseconds = timestamp_us % (int64_t)1e6,
+        .size_file = captured_len - 4,
+        .size_wire = len - 4,
+    };
 
     hexaprint(&framehead, sizeof(framehead));
-    puts("");
+    //puts("");
 
-    hexaprint(&radiohead, sizeof(radiohead));
-    hexaprint(&radiohead_flags, sizeof(radiohead_flags));
-    puts("");
+    //hexaprint(&radiohead, sizeof(radiohead));
+    //hexaprint(&radiohead_flags, sizeof(radiohead_flags));
+    //puts("");
 
-    hexaprint(frame, captured_len);
-    puts("");
+    hexaprint(frame, captured_len - 4); // remove weird FCS
     puts("");
 }
 
