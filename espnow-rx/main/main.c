@@ -11,6 +11,13 @@
 
 #include "main.h"
 
+// LED logic is inverted
+#define LED_ON  0
+#define LED_OFF 1
+#define LED_BITMASK GPIO_Pin_2
+#define LED_GPIO GPIO_NUM_2
+
+
 static const char *TAG = "espnow-rx";
 static uint8_t broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 static xQueueHandle received_data_queue;
@@ -92,7 +99,7 @@ static void read_incoming_data(void *pvParameter) {
 
     /* Text Only */
     while (xQueueReceive(received_data_queue, &evt, portMAX_DELAY) == pdTRUE) {
-        gpio_set_level(GPIO_NUM_2, 0); //on
+        gpio_set_level(LED_GPIO, LED_ON); //on
 
         #ifdef CONFIG_ESPNOW_OUTPUT_READABLE
         printf("Received %d bytes from "MACSTR"\n>|%s|<\n", evt.data_len, // pretty format
@@ -106,7 +113,7 @@ static void read_incoming_data(void *pvParameter) {
         #endif
         free(evt.data);
 
-        gpio_set_level(GPIO_NUM_2, 1); //off
+        gpio_set_level(LED_GPIO, LED_OFF); //off
     }
 }
 
@@ -116,11 +123,11 @@ void app_main() {
 
     // Prepare GPIO for blinking blue LED in ESP-01S
     gpio_config_t io_conf = {
-	    .pin_bit_mask = GPIO_Pin_2,
-	    .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = LED_BITMASK,
+        .mode = GPIO_MODE_OUTPUT,
     };
-	gpio_config(&io_conf);
-    gpio_set_level(GPIO_NUM_2, 1); // LED is inverted
+    gpio_config(&io_conf);
+    gpio_set_level(LED_GPIO, LED_OFF); // LED is inverted
 
     // Initialize NVS, wifi and esp_now
     ESP_ERROR_CHECK( nvs_flash_init() );

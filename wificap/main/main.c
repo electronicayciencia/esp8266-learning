@@ -27,7 +27,7 @@ pcap header
 #define TAG "sniffer"
 
 #define MAC_HEADER_LEN 24
-#define SNIFFER_DATA_LEN 5000
+#define SNIFFER_DATA_LEN 121
 #define MAC_HDR_LEN_MAX 40
 
 static EventGroupHandle_t wifi_event_group;
@@ -65,10 +65,11 @@ static void sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type)
     uint32_t captured_len;
 
     // Only ESPNOW
+    /*
     if (frame[25] != 0x18 ||
         frame[26] != 0xfe ||
         frame[27] != 0x34) return;
-
+    */
 
     uint8_t total_num = 1, count = 0;
     uint16_t seq_buf = 0;

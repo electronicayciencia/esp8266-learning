@@ -11,7 +11,14 @@
 #include "esp_system.h"
 #include "ds1820.h"
 
-// GPIO_NUM_2 do not seem to work (pull-up issues?)
+// LED logic is inverted
+/*
+#define LED_ON  0
+#define LED_OFF 1
+#define LED_BITMASK GPIO_Pin_2
+#define LED_GPIO GPIO_NUM_2
+*/
+
 #define PIN_1WIRE  GPIO_NUM_2
 
 static const char *TAG = "espnow-tx";
@@ -70,12 +77,22 @@ static esp_err_t espnow_init(void)
 static void teardown(void) {
     esp_now_deinit();
     esp_wifi_stop();
+    ESP_LOGI(TAG, "Sleep: %ds.\n", CONFIG_MEASUREMENT_INTERVAL);
     esp_deep_sleep(CONFIG_MEASUREMENT_INTERVAL * 1e6);
 }
 
 
 void app_main()
 {
+    // Prepare GPIO for blinking blue LED in ESP-01S
+    /*
+    gpio_config_t io_conf = {
+        .pin_bit_mask = LED_BITMASK,
+        .mode = GPIO_MODE_OUTPUT,
+    };
+    gpio_config(&io_conf);
+    gpio_set_level(LED_GPIO, LED_ON);
+    */
     ds1820_device_t *dev = ds1820_init(PIN_1WIRE, DS1820_ROM_UNKNOWN);
 
     if (dev == NULL) {
@@ -107,6 +124,8 @@ void app_main()
     else {
         ESP_LOGI(TAG, "Data sent: %s\n", data);
     }
+
+    //gpio_set_level(LED_GPIO, LED_OFF);
 
     teardown();
 }
