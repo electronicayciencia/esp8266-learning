@@ -10,6 +10,7 @@
 #include "esp_sleep.h"
 #include "esp_system.h"
 #include "ds1820.h"
+#include "driver/adc.h"
 
 // LED logic is inverted
 /*
@@ -24,8 +25,30 @@
 static const char *TAG = "espnow-tx";
 static uint8_t broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
+
+static esp_err_t read_vcc(uint16_t *vcc_value) {
+    ESP_LOGI(TAG, "adc read start");
+    // init adc and read
+    adc_config_t adc_config;
+
+    // Depend on menuconfig->Component config->PHY->vdd33_const value
+    // When measuring system voltage(ADC_READ_VDD_MODE), vdd33_const must be set to 255.
+    adc_config.mode = ADC_READ_VDD_MODE;
+    adc_config.clk_div = 8; // ADC sample collection clock = 80MHz/clk_div = 10MHz
+
+    ESP_ERROR_CHECK(adc_init(&adc_config));
+
+    if (ESP_OK == adc_read(vcc_value)) {
+        ESP_LOGI(TAG, "VCC (mV): %d", *vcc_value);
+        return ESP_OK;
+    }
+
+}
+
+
 /* WiFi should start before using ESPNOW */
-static esp_err_t wifi_init(void)
+/* Also, read ADC just before strating wifi */
+static esp_err_t wifi_init_and_vcc_read(uint16_t *vcc_value)
 {
     tcpip_adapter_init();
 
@@ -33,10 +56,12 @@ static esp_err_t wifi_init(void)
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+
+    ESP_ERROR_CHECK( read_vcc(vcc_value) );
+
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
     ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK( esp_wifi_start());
-
     ESP_ERROR_CHECK( esp_wifi_set_channel(CONFIG_ESPNOW_CHANNEL, 0) );
     return ESP_OK;
 }
@@ -82,6 +107,8 @@ static void teardown(void) {
 }
 
 
+
+
 void app_main()
 {
     // Prepare GPIO for blinking blue LED in ESP-01S
@@ -93,6 +120,7 @@ void app_main()
     gpio_config(&io_conf);
     gpio_set_level(LED_GPIO, LED_ON);
     */
+
     ds1820_device_t *dev = ds1820_init(PIN_1WIRE, DS1820_ROM_UNKNOWN);
 
     if (dev == NULL) {
@@ -108,21 +136,23 @@ void app_main()
         teardown();
     }
 
+
     // Initialize NVS, wifi and esp_now
+    uint16_t vcc_value;
     ESP_ERROR_CHECK( nvs_flash_init() );
-    ESP_ERROR_CHECK( wifi_init() );
+    ESP_ERROR_CHECK( wifi_init_and_vcc_read(&vcc_value) );
     ESP_ERROR_CHECK( espnow_init() );
 
     char *data = malloc(sizeof(char) * ESP_NOW_MAX_DATA_LEN);
     //no float format compiled in SDK if 'nano' formatting options enabled
-    snprintf(data, ESP_NOW_MAX_DATA_LEN, "t=%.3f", temperature);
+    snprintf(data, ESP_NOW_MAX_DATA_LEN, "t=%.3f,v=%d", temperature, vcc_value);
     
     esp_err_t ret = esp_now_send(broadcast_mac, (uint8_t*) data, strlen(data) + 1);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Send error: %d", ret);
     }
     else {
-        ESP_LOGI(TAG, "Data sent: %s\n", data);
+        ESP_LOGI(TAG, "Data sent: %s", data);
     }
 
     //gpio_set_level(LED_GPIO, LED_OFF);
