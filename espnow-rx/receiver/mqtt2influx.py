@@ -51,6 +51,13 @@ def lineformat(text):
     if not msg or " " in msg:
         raise ValueError
 
+    if len(mac) != 12:
+        raise ValueError
+
+    if not mac == "cc50e35d6a90":
+        logging.info("Received msg from foreign mac")
+        raise ValueError
+
     line = "{},mac={} {} {}".format(FLUX_MEASURE, mac, msg, ns)
     return line
 
